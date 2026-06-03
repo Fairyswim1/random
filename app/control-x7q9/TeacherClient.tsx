@@ -4,6 +4,7 @@ import { useEffect, useState, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import NumberLine from "@/components/NumberLine";
 import LeaderBoard from "@/components/LeaderBoard";
+import CoinFlipAnimation from "@/components/CoinFlipAnimation";
 import {
   subscribeGameState,
   subscribeGroups,
@@ -280,27 +281,34 @@ export default function TeacherPage() {
             </div>
           </div>
 
-          {/* 동전 기록 */}
+          {/* 동전 애니메이션 + 기록 */}
           <div className="bg-white rounded-2xl shadow-md p-5">
-            <h3 className="font-bold text-gray-700 mb-3">🪙 동전 기록</h3>
+            <h3 className="font-bold text-gray-700 mb-3">🪙 동전 던지기</h3>
+            <div className="flex flex-col items-center mb-4">
+              <CoinFlipAnimation
+                isFlipping={isFlipping}
+                result={coinResult}
+                flipCount={flipLog.length}
+              />
+            </div>
             {flipLog.length === 0 ? (
-              <div className="text-gray-300 text-sm text-center py-8">동전을 던지면 여기에 기록됩니다</div>
+              <div className="text-gray-300 text-sm text-center py-2">동전을 던지면 여기에 기록됩니다</div>
             ) : (
               <>
-                <div className="flex flex-wrap gap-1.5 max-h-48 overflow-y-auto">
+                <div className="flex flex-wrap gap-1.5 max-h-32 overflow-y-auto">
                   {flipLog.map((r, i) => (
                     <motion.span
                       key={i}
                       initial={{ scale: 0 }}
                       animate={{ scale: 1 }}
-                      className={`w-8 h-8 rounded-full flex items-center justify-center text-base shadow
+                      className={`w-8 h-8 rounded-full flex items-center justify-center text-sm shadow
                         ${r === "heads" ? "bg-yellow-100 text-yellow-600" : "bg-blue-100 text-blue-600"}`}
                     >
                       {r === "heads" ? "☀️" : "🌙"}
                     </motion.span>
                   ))}
                 </div>
-                <div className="mt-3 text-sm text-gray-500 flex gap-4">
+                <div className="mt-2 text-sm text-gray-500 flex gap-4">
                   <span>☀️ {flipLog.filter((r) => r === "heads").length}회</span>
                   <span>🌙 {flipLog.filter((r) => r === "tails").length}회</span>
                 </div>

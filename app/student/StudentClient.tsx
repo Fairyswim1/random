@@ -26,7 +26,6 @@ export default function StudentPage() {
   const [groupId, setGroupId] = useState<string>("");
   const [groupName, setGroupName] = useState<string>("");
   const [joined, setJoined] = useState(false);
-  const [groupIdInput, setGroupIdInput] = useState("");
   const [groupNameInput, setGroupNameInput] = useState("");
   const [groupsLoaded, setGroupsLoaded] = useState(false);
 
@@ -79,15 +78,17 @@ export default function StudentPage() {
   const myGroup: Group | null = joined ? groups[groupId] ?? null : null;
 
   const handleJoin = async () => {
-    if (!groupIdInput.trim() || !groupNameInput.trim()) {
-      setBetError("조 번호와 조 이름을 입력하세요");
+    const name = groupNameInput.trim();
+    if (!name) {
+      setBetError("조 이름을 입력하세요");
       return;
     }
-    await registerGroup(groupIdInput.trim(), groupNameInput.trim());
-    setGroupId(groupIdInput.trim());
-    setGroupName(groupNameInput.trim());
-    sessionStorage.setItem("groupId", groupIdInput.trim());
-    sessionStorage.setItem("groupName", groupNameInput.trim());
+    const id = name.toLowerCase().replace(/\s+/g, "-");
+    await registerGroup(id, name);
+    setGroupId(id);
+    setGroupName(name);
+    sessionStorage.setItem("groupId", id);
+    sessionStorage.setItem("groupName", name);
     setJoined(true);
     setBetError("");
   };
@@ -138,28 +139,19 @@ export default function StudentPage() {
           <div className="text-center mb-6">
             <div className="text-6xl mb-3">🎓</div>
             <h1 className="text-2xl font-bold text-gray-800">학생 입장</h1>
-            <p className="text-gray-500 text-sm mt-1">조 번호와 이름을 입력하세요</p>
+            <p className="text-gray-500 text-sm mt-1">조 이름을 입력하세요</p>
           </div>
           <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-600 mb-1">조 번호</label>
-              <input
-                type="text"
-                value={groupIdInput}
-                onChange={(e) => setGroupIdInput(e.target.value)}
-                placeholder="예: 1, 2, 3..."
-                className="w-full border border-gray-300 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-pink-400 text-gray-800"
-              />
-            </div>
             <div>
               <label className="block text-sm font-medium text-gray-600 mb-1">조 이름</label>
               <input
                 type="text"
                 value={groupNameInput}
                 onChange={(e) => setGroupNameInput(e.target.value)}
-                placeholder="예: 꿈나무 조"
+                placeholder="예: 꿈나무 조, 1조, 번개팀..."
                 className="w-full border border-gray-300 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-pink-400 text-gray-800"
                 onKeyDown={(e) => e.key === "Enter" && handleJoin()}
+                autoFocus
               />
             </div>
             {betError && <p className="text-red-500 text-sm">{betError}</p>}
@@ -380,39 +372,66 @@ export default function StudentPage() {
               animate={{ opacity: 1, scale: 1 }}
               className="space-y-4"
             >
-              {/* Result card */}
-              <div className={`rounded-2xl p-6 text-center shadow-lg ${
-                (myGroup?.bets?.[String(gameState.result)] ?? 0) > 0
-                  ? "bg-gradient-to-br from-yellow-300 to-orange-300"
-                  : "bg-gradient-to-br from-gray-100 to-gray-200"
-              }`}>
-                <div className="text-5xl mb-3">
-                  {(myGroup?.bets?.[String(gameState.result)] ?? 0) > 0 ? "🎉" : "😢"}
-                </div>
-                <div className="text-2xl font-bold text-gray-800">
-                  최종 위치: {gameState.result}번
-                </div>
-                {(myGroup?.bets?.[String(gameState.result)] ?? 0) > 0 ? (
-                  <div className="mt-3">
-                    <div className="text-lg font-bold text-yellow-800">정답! 🏆</div>
-                    <div className="text-sm text-yellow-700 mt-1">
-                      +{(myGroup!.bets![String(gameState.result)]) * 2}코인 획득!
+              {(() => {
+                const wonBet = myGroup?.bets?.[String(gameState.result)] ?? 0;
+                const reward = wonBet * 2;
+                const isWinner = wonBet > 0;
+                return (
+                  <>
+                    {/* Result card */}
+                    <div className={`rounded-2xl p-6 text-center shadow-lg ${
+                      isWinner
+                        ? "bg-gradient-to-br from-yellow-300 to-orange-400"
+                        : "bg-gradient-to-br from-gray-100 to-gray-200"
+                    }`}>
+                      <motion.div
+                        initial={{ scale: 0 }}
+                        animate={{ scale: [0, 1.3, 1] }}
+                        transition={{ duration: 0.4 }}
+                        className="text-6xl mb-3"
+                      >
+                        {isWinner ? "🎉" : "😢"}
+                      </motion.div>
+                      <div className="text-2xl font-bold text-gray-800 mb-2">
+                        최종 위치: <span className="text-3xl">{gameState.result}번</span>
+                      </div>
+                      {isWinner ? (
+                        <div className="mt-2">
+                          <div className="text-xl font-black text-yellow-900">정답! 🏆</div>
+                          <motion.div
+                            initial={{ scale: 0.5, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            transition={{ delay: 0.2, type: "spring" }}
+                            className="mt-2 text-4xl font-black text-yellow-800"
+                          >
+                            +{reward} 🪙
+                          </motion.div>
+                          <div className="text-sm text-yellow-700 mt-1">
+                            ({wonBet}코인 × 2배)
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="mt-2 text-gray-500">아쉽지만 다음 라운드에 도전하세요!</div>
+                      )}
                     </div>
-                  </div>
-                ) : (
-                  <div className="mt-3 text-gray-500 text-sm">아쉽지만 다음 라운드에 도전하세요!</div>
-                )}
-              </div>
 
-              {/* My coins */}
-              <div className="bg-white rounded-2xl shadow-md p-5 text-center">
-                <div className="text-sm text-gray-500 mb-1">내 보유 코인</div>
-                <div className="flex items-center justify-center gap-2">
-                  <span className="text-3xl">🪙</span>
-                  <span className="text-4xl font-bold text-yellow-600">{myGroup?.coins ?? 0}</span>
-                </div>
-                <div className="text-sm text-gray-400 mt-1">누적 획득: {myGroup?.totalWon ?? 0}코인</div>
-              </div>
+                    {/* My coins */}
+                    <motion.div
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.3 }}
+                      className="bg-white rounded-2xl shadow-md p-5 text-center"
+                    >
+                      <div className="text-sm text-gray-500 mb-2">현재 보유 코인</div>
+                      <div className="flex items-center justify-center gap-2">
+                        <span className="text-3xl">🪙</span>
+                        <span className="text-5xl font-black text-yellow-500">{myGroup?.coins ?? 0}</span>
+                      </div>
+                      <div className="text-sm text-gray-400 mt-2">이번 라운드 누적 획득: {myGroup?.totalWon ?? 0}코인</div>
+                    </motion.div>
+                  </>
+                );
+              })()}
             </motion.div>
           )}
         </AnimatePresence>
