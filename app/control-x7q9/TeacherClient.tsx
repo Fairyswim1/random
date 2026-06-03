@@ -28,9 +28,9 @@ export default function TeacherPage() {
   const [gameState, setGameStateLocal] = useState<GameState>(defaultGameState);
   const [groups, setGroups] = useState<{ [id: string]: Group }>({});
   const [numFlips, setNumFlips] = useState(5);
-  // 전체 소요시간 무조건 5초 고정
-  const flipInterval = Math.max(30, Math.round(5000 / numFlips));
-  const transitionDuration = Math.max(0.025, flipInterval / 1000 * 0.7);
+  // 전체 소요시간 무조건 3초 고정
+  const flipInterval = Math.max(30, Math.round(3000 / numFlips));
+  const transitionDuration = Math.max(0.025, flipInterval / 1000 * 0.65);
   const [isFlipping, setIsFlipping] = useState(false);
   const [coinResult, setCoinResult] = useState<CoinResult | null>(null);
   const [flipLog, setFlipLog] = useState<CoinResult[]>([]);
@@ -234,7 +234,7 @@ export default function TeacherPage() {
                 <span className="text-sm text-gray-500">회</span>
               </div>
               <div className="mt-1 text-xs text-gray-400">
-                한 번당 {flipInterval}ms · 총 약 {Math.round(flipInterval * numFlips / 1000)}초
+                한 번당 {flipInterval}ms · 총 약 {Math.round(flipInterval * numFlips / 1000)}초 (기준: 3초)
               </div>
             </div>
 
