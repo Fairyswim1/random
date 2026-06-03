@@ -25,9 +25,9 @@ export default function TeacherPage() {
   const [gameState, setGameStateLocal] = useState<GameState>(defaultGameState);
   const [groups, setGroups] = useState<{ [id: string]: Group }>({});
   const [numFlips, setNumFlips] = useState(5);
-  // 전체 소요시간 ~10초 고정, 횟수가 많을수록 한 번당 빠름 (최소 150ms)
-  const flipInterval = Math.max(150, Math.round(10000 / numFlips));
-  const transitionDuration = Math.max(0.12, flipInterval / 1000 * 0.7);
+  // 전체 소요시간 ~5초 고정, 횟수가 많을수록 한 번당 빠름 (최소 100ms)
+  const flipInterval = Math.max(100, Math.round(5000 / numFlips));
+  const transitionDuration = Math.max(0.08, flipInterval / 1000 * 0.7);
   const [isFlipping, setIsFlipping] = useState(false);
   const [coinResult, setCoinResult] = useState<CoinResult | null>(null);
   const [flipLog, setFlipLog] = useState<CoinResult[]>([]);
