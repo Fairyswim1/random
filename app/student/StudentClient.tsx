@@ -95,6 +95,7 @@ export default function StudentPage() {
 
   const totalBet = Object.values(bets).reduce((a, b) => a + b, 0);
   const availableCoins = (myGroup?.coins ?? 10) - totalBet;
+  const allCoinsUsed = availableCoins === 0 && totalBet > 0;
 
   const handleBetChange = (pos: number, value: number) => {
     const current = bets[pos.toString()] ?? 0;
@@ -104,13 +105,15 @@ export default function StudentPage() {
     setBets((prev) => ({ ...prev, [pos.toString()]: value }));
   };
 
+  const myCoins = myGroup?.coins ?? 10;
+
   const handleSubmit = async () => {
     if (totalBet === 0) {
-      setBetError("최소 1코인 이상 배팅하세요");
+      setBetError("코인을 배팅하세요");
       return;
     }
-    if (totalBet > (myGroup?.coins ?? 0)) {
-      setBetError("코인이 부족합니다");
+    if (totalBet < myCoins) {
+      setBetError(`코인 ${myCoins}개를 전부 사용해야 합니다! (${myCoins - totalBet}개 남음)`);
       return;
     }
     setSubmitting(true);
@@ -232,14 +235,16 @@ export default function StudentPage() {
               <div className="flex items-center justify-between mb-4">
                 <h2 className="font-bold text-gray-700 text-lg">🪙 베팅하기</h2>
                 <div className="text-sm text-gray-500">
-                  남은 코인: <span className="font-bold text-yellow-600 text-base">{availableCoins}</span>
+                  남은 코인: <span className={`font-bold text-base ${availableCoins === 0 ? "text-green-600" : "text-yellow-600"}`}>{availableCoins}</span>
                   <span className="text-yellow-400 ml-1">🪙</span>
                 </div>
               </div>
 
-              <p className="text-sm text-gray-500 mb-4">
+              <p className="text-sm text-gray-500 mb-1">
                 {gameState.numFlips}번 던진 후 캐릭터가 어느 위치에 있을지 예측하세요!
-                여러 위치에 분할 배팅 가능합니다.
+              </p>
+              <p className="text-xs text-orange-500 font-semibold mb-4">
+                ⚠️ 코인 {myCoins}개를 전부 사용해야 제출할 수 있어요!
               </p>
 
               <div className="grid grid-cols-7 gap-1.5 mb-5">
@@ -298,10 +303,11 @@ export default function StudentPage() {
 
               <button
                 onClick={handleSubmit}
-                disabled={submitting || totalBet === 0}
-                className="w-full bg-pink-500 hover:bg-pink-600 disabled:bg-gray-300 text-white font-bold py-3 rounded-xl transition shadow"
+                disabled={submitting || !allCoinsUsed}
+                className={`w-full font-bold py-3 rounded-xl transition shadow text-white
+                  ${allCoinsUsed ? "bg-pink-500 hover:bg-pink-600" : "bg-gray-300 cursor-not-allowed"}`}
               >
-                {submitting ? "제출 중..." : "베팅 확정! 🎯"}
+                {submitting ? "제출 중..." : allCoinsUsed ? "베팅 확정! 🎯" : `${availableCoins}코인 더 배팅하세요`}
               </button>
             </motion.div>
           )}
@@ -373,9 +379,8 @@ export default function StudentPage() {
               className="space-y-4"
             >
               {(() => {
-                const wonBet = myGroup?.bets?.[String(gameState.result)] ?? 0;
-                const reward = wonBet * 2;
-                const isWinner = wonBet > 0;
+                const reward = myGroup?.lastReward ?? 0;
+                const isWinner = reward > 0;
                 return (
                   <>
                     {/* Result card */}
@@ -407,7 +412,7 @@ export default function StudentPage() {
                             +{reward} 🪙
                           </motion.div>
                           <div className="text-sm text-yellow-700 mt-1">
-                            ({wonBet}코인 × 2배)
+                            ({reward / 2}코인 × 2배)
                           </div>
                         </div>
                       ) : (

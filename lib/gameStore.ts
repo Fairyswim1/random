@@ -22,6 +22,7 @@ export interface Group {
   bets: GroupBet;
   submitted: boolean;
   totalWon: number;
+  lastReward?: number | null;
 }
 
 const GAME_STATE_REF = "gameState";
@@ -134,10 +135,9 @@ export async function processResults(result: number) {
   for (const [groupId, group] of Object.entries(groups)) {
     const betOnResult = group.bets?.[result.toString()] ?? 0;
     const reward = betOnResult * 2;
-    updates[`${GROUPS_REF}/${groupId}/coins`] = group.coins + reward;
+    // bets는 결과 화면에서 보여줘야 하므로 여기서 지우지 않음 (다음 라운드 시작 시 정리)
+    updates[`${GROUPS_REF}/${groupId}/lastReward`] = reward;
     updates[`${GROUPS_REF}/${groupId}/totalWon`] = (group.totalWon ?? 0) + reward;
-    updates[`${GROUPS_REF}/${groupId}/submitted`] = false;
-    updates[`${GROUPS_REF}/${groupId}/bets`] = {};
   }
 
   await update(ref(db), updates);
@@ -155,14 +155,17 @@ export async function resetBets() {
   await update(ref(db), updates);
 }
 
-// 매 라운드 시작 시 모든 조에 코인 지급
+// 매 라운드 시작 시 코인을 정확히 10으로 리셋 (누적 X)
 export async function giveCoinsToAll(amount: number) {
   const { ref, update } = await import("firebase/database");
   const db = await getDb();
   const groups = await getGroups();
   const updates: Record<string, unknown> = {};
-  for (const [groupId, group] of Object.entries(groups)) {
-    updates[`${GROUPS_REF}/${groupId}/coins`] = group.coins + amount;
+  for (const groupId of Object.keys(groups)) {
+    updates[`${GROUPS_REF}/${groupId}/coins`] = amount;
+    updates[`${GROUPS_REF}/${groupId}/bets`] = {};
+    updates[`${GROUPS_REF}/${groupId}/submitted`] = false;
+    updates[`${GROUPS_REF}/${groupId}/lastReward`] = null;
   }
   await update(ref(db), updates);
 }
