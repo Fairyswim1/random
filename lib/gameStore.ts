@@ -155,6 +155,18 @@ export async function resetBets() {
   await update(ref(db), updates);
 }
 
+// 매 라운드 시작 시 모든 조에 코인 지급
+export async function giveCoinsToAll(amount: number) {
+  const { ref, update } = await import("firebase/database");
+  const db = await getDb();
+  const groups = await getGroups();
+  const updates: Record<string, unknown> = {};
+  for (const [groupId, group] of Object.entries(groups)) {
+    updates[`${GROUPS_REF}/${groupId}/coins`] = group.coins + amount;
+  }
+  await update(ref(db), updates);
+}
+
 // 코인을 10으로 리셋하되 그룹은 유지 (학생들 재입장 불필요)
 export async function resetCoinsOnly() {
   const { ref, update } = await import("firebase/database");

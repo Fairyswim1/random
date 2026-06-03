@@ -13,6 +13,7 @@ import {
   resetBets,
   resetAllGroups,
   resetCoinsOnly,
+  giveCoinsToAll,
   GameState,
   Group,
   defaultGameState,
@@ -26,9 +27,9 @@ export default function TeacherPage() {
   const [gameState, setGameStateLocal] = useState<GameState>(defaultGameState);
   const [groups, setGroups] = useState<{ [id: string]: Group }>({});
   const [numFlips, setNumFlips] = useState(5);
-  // 전체 소요시간 ~5초 고정, 횟수가 많을수록 한 번당 빠름 (최소 100ms)
-  const flipInterval = Math.max(100, Math.round(5000 / numFlips));
-  const transitionDuration = Math.max(0.08, flipInterval / 1000 * 0.7);
+  // 전체 소요시간 무조건 5초 고정
+  const flipInterval = Math.max(30, Math.round(5000 / numFlips));
+  const transitionDuration = Math.max(0.025, flipInterval / 1000 * 0.7);
   const [isFlipping, setIsFlipping] = useState(false);
   const [coinResult, setCoinResult] = useState<CoinResult | null>(null);
   const [flipLog, setFlipLog] = useState<CoinResult[]>([]);
@@ -54,6 +55,7 @@ export default function TeacherPage() {
       bettingOpen: true,
     });
     await resetBets();
+    await giveCoinsToAll(10); // 매 라운드 10코인 지급
     setFlipLog([]);
     setCoinResult(null);
     setShowResultBanner(false);
