@@ -1,5 +1,6 @@
-import { initializeApp, getApps, FirebaseApp } from "firebase/app";
-import { getDatabase, Database } from "firebase/database";
+type Database = import("firebase/database").Database;
+
+let _db: Database | undefined;
 
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
@@ -11,13 +12,11 @@ const firebaseConfig = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 };
 
-function getFirebaseApp(): FirebaseApp {
-  if (getApps().length === 0) {
-    return initializeApp(firebaseConfig);
-  }
-  return getApps()[0];
-}
-
-export function getDb(): Database {
-  return getDatabase(getFirebaseApp());
+export async function getDb(): Promise<Database> {
+  if (_db) return _db;
+  const { initializeApp, getApps } = await import("firebase/app");
+  const { getDatabase } = await import("firebase/database");
+  const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
+  _db = getDatabase(app);
+  return _db;
 }

@@ -1,12 +1,4 @@
 import { getDb } from "./firebase";
-import {
-  ref,
-  set,
-  get,
-  onValue,
-  update,
-  remove,
-} from "firebase/database";
 
 export type GameStatus = "idle" | "betting" | "flipping" | "results";
 
@@ -32,11 +24,6 @@ export interface Group {
   totalWon: number;
 }
 
-export interface GameData {
-  gameState: GameState;
-  groups: { [groupId: string]: Group };
-}
-
 const GAME_STATE_REF = "gameState";
 const GROUPS_REF = "groups";
 
@@ -50,44 +37,71 @@ export const defaultGameState: GameState = {
   bettingOpen: false,
 };
 
-export async function initGame() {
-  await set(ref(getDb(), GAME_STATE_REF), defaultGameState);
+export function subscribeGameState(cb: (state: GameState) => void): () => void {
+  let unsubscribe: (() => void) | null = null;
+  let cancelled = false;
+
+  (async () => {
+    const { ref, onValue } = await import("firebase/database");
+    if (cancelled) return;
+    const db = await getDb();
+    if (cancelled) return;
+    unsubscribe = onValue(ref(db, GAME_STATE_REF), (snap) => {
+      cb(snap.val() ?? defaultGameState);
+    });
+  })();
+
+  return () => {
+    cancelled = true;
+    unsubscribe?.();
+  };
 }
 
-export async function getGameState(): Promise<GameState> {
-  const snap = await get(ref(getDb(), GAME_STATE_REF));
-  return snap.val() ?? defaultGameState;
-}
+export function subscribeGroups(cb: (groups: { [id: string]: Group }) => void): () => void {
+  let unsubscribe: (() => void) | null = null;
+  let cancelled = false;
 
-export function subscribeGameState(cb: (state: GameState) => void) {
-  return onValue(ref(getDb(), GAME_STATE_REF), (snap) => {
-    cb(snap.val() ?? defaultGameState);
-  });
+  (async () => {
+    const { ref, onValue } = await import("firebase/database");
+    if (cancelled) return;
+    const db = await getDb();
+    if (cancelled) return;
+    unsubscribe = onValue(ref(db, GROUPS_REF), (snap) => {
+      cb(snap.val() ?? {});
+    });
+  })();
+
+  return () => {
+    cancelled = true;
+    unsubscribe?.();
+  };
 }
 
 export async function updateGameState(partial: Partial<GameState>) {
-  await update(ref(getDb(), GAME_STATE_REF), partial);
+  const { ref, update } = await import("firebase/database");
+  const db = await getDb();
+  await update(ref(db, GAME_STATE_REF), partial);
 }
 
 export async function setGameState(state: GameState) {
-  await set(ref(getDb(), GAME_STATE_REF), state);
-}
-
-export function subscribeGroups(cb: (groups: { [id: string]: Group }) => void) {
-  return onValue(ref(getDb(), GROUPS_REF), (snap) => {
-    cb(snap.val() ?? {});
-  });
+  const { ref, set } = await import("firebase/database");
+  const db = await getDb();
+  await set(ref(db, GAME_STATE_REF), state);
 }
 
 export async function getGroups(): Promise<{ [id: string]: Group }> {
-  const snap = await get(ref(getDb(), GROUPS_REF));
+  const { ref, get } = await import("firebase/database");
+  const db = await getDb();
+  const snap = await get(ref(db, GROUPS_REF));
   return snap.val() ?? {};
 }
 
 export async function registerGroup(groupId: string, name: string) {
-  const existing = await get(ref(getDb(), `${GROUPS_REF}/${groupId}`));
+  const { ref, get, set } = await import("firebase/database");
+  const db = await getDb();
+  const existing = await get(ref(db, `${GROUPS_REF}/${groupId}`));
   if (!existing.val()) {
-    await set(ref(getDb(), `${GROUPS_REF}/${groupId}`), {
+    await set(ref(db, `${GROUPS_REF}/${groupId}`), {
       name,
       coins: 10,
       bets: {},
@@ -98,12 +112,13 @@ export async function registerGroup(groupId: string, name: string) {
 }
 
 export async function submitBet(groupId: string, bets: GroupBet) {
+  const { ref, get, update } = await import("firebase/database");
+  const db = await getDb();
   const totalBet = Object.values(bets).reduce((a, b) => a + b, 0);
-  const snap = await get(ref(getDb(), `${GROUPS_REF}/${groupId}`));
+  const snap = await get(ref(db, `${GROUPS_REF}/${groupId}`));
   const group: Group = snap.val();
   if (totalBet > group.coins) throw new Error("코인이 부족합니다");
-
-  await update(ref(getDb(), `${GROUPS_REF}/${groupId}`), {
+  await update(ref(db, `${GROUPS_REF}/${groupId}`), {
     bets,
     submitted: true,
     coins: group.coins - totalBet,
@@ -111,6 +126,8 @@ export async function submitBet(groupId: string, bets: GroupBet) {
 }
 
 export async function processResults(result: number) {
+  const { ref, update } = await import("firebase/database");
+  const db = await getDb();
   const groups = await getGroups();
   const updates: Record<string, unknown> = {};
 
@@ -123,19 +140,23 @@ export async function processResults(result: number) {
     updates[`${GROUPS_REF}/${groupId}/bets`] = {};
   }
 
-  await update(ref(getDb()), updates);
+  await update(ref(db), updates);
 }
 
 export async function resetBets() {
+  const { ref, update } = await import("firebase/database");
+  const db = await getDb();
   const groups = await getGroups();
   const updates: Record<string, unknown> = {};
   for (const groupId of Object.keys(groups)) {
     updates[`${GROUPS_REF}/${groupId}/submitted`] = false;
     updates[`${GROUPS_REF}/${groupId}/bets`] = {};
   }
-  await update(ref(getDb()), updates);
+  await update(ref(db), updates);
 }
 
 export async function resetAllGroups() {
-  await remove(ref(getDb(), GROUPS_REF));
+  const { ref, remove } = await import("firebase/database");
+  const db = await getDb();
+  await remove(ref(db, GROUPS_REF));
 }
