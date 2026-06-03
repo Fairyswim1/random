@@ -12,6 +12,7 @@ import {
   processResults,
   resetBets,
   resetAllGroups,
+  resetCoinsOnly,
   GameState,
   Group,
   defaultGameState,
@@ -105,8 +106,17 @@ export default function TeacherPage() {
     flippingRef.current = false;
   }, [numFlips, flipInterval]);
 
+  const handleResetCoins = async () => {
+    if (!confirm("모든 조의 코인을 10개로 리셋하시겠습니까? (조는 유지됩니다)")) return;
+    await resetCoinsOnly();
+    await setGameState({ ...defaultGameState, round: 0 });
+    setFlipLog([]);
+    setCoinResult(null);
+    setShowResultBanner(false);
+  };
+
   const handleReset = async () => {
-    if (!confirm("모든 조의 데이터를 초기화하시겠습니까?")) return;
+    if (!confirm("모든 조를 완전히 삭제하시겠습니까? (학생들이 재입장해야 합니다)")) return;
     await resetAllGroups();
     await setGameState(defaultGameState);
     setFlipLog([]);
@@ -259,8 +269,11 @@ export default function TeacherPage() {
                   ⏳ 던지는 중... ({flipLog.length}/{numFlips})
                 </div>
               )}
+              <button onClick={handleResetCoins} className="w-full bg-yellow-100 hover:bg-yellow-200 text-yellow-700 font-medium py-2 rounded-xl transition text-sm">
+                🔄 코인 리셋 (조 유지)
+              </button>
               <button onClick={handleReset} className="w-full bg-red-100 hover:bg-red-200 text-red-600 font-medium py-2 rounded-xl transition text-sm">
-                🗑️ 전체 초기화
+                🗑️ 전체 초기화 (조 삭제)
               </button>
             </div>
           </div>

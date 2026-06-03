@@ -28,6 +28,7 @@ export default function StudentPage() {
   const [joined, setJoined] = useState(false);
   const [groupIdInput, setGroupIdInput] = useState("");
   const [groupNameInput, setGroupNameInput] = useState("");
+  const [groupsLoaded, setGroupsLoaded] = useState(false);
 
   // Betting
   const [bets, setBets] = useState<GroupBet>({});
@@ -36,7 +37,10 @@ export default function StudentPage() {
 
   useEffect(() => {
     const unsub1 = subscribeGameState(setGameState);
-    const unsub2 = subscribeGroups(setGroups);
+    const unsub2 = subscribeGroups((g) => {
+      setGroups(g);
+      setGroupsLoaded(true);
+    });
     return () => {
       unsub1();
       unsub2();
@@ -53,6 +57,18 @@ export default function StudentPage() {
       setJoined(true);
     }
   }, []);
+
+  // 교사가 전체 초기화하면 → 입장 화면으로 되돌리기
+  useEffect(() => {
+    if (joined && groupsLoaded && !groups[groupId]) {
+      sessionStorage.removeItem("groupId");
+      sessionStorage.removeItem("groupName");
+      setJoined(false);
+      setGroupId("");
+      setGroupName("");
+      setBets({});
+    }
+  }, [groups, groupId, joined, groupsLoaded]);
 
   // Reset bets when new round starts
   useEffect(() => {

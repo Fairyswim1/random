@@ -155,6 +155,22 @@ export async function resetBets() {
   await update(ref(db), updates);
 }
 
+// 코인을 10으로 리셋하되 그룹은 유지 (학생들 재입장 불필요)
+export async function resetCoinsOnly() {
+  const { ref, update } = await import("firebase/database");
+  const db = await getDb();
+  const groups = await getGroups();
+  const updates: Record<string, unknown> = {};
+  for (const groupId of Object.keys(groups)) {
+    updates[`${GROUPS_REF}/${groupId}/coins`] = 10;
+    updates[`${GROUPS_REF}/${groupId}/totalWon`] = 0;
+    updates[`${GROUPS_REF}/${groupId}/bets`] = {};
+    updates[`${GROUPS_REF}/${groupId}/submitted`] = false;
+  }
+  await update(ref(db), updates);
+}
+
+// 그룹 완전 삭제 (학생들 재입장 필요)
 export async function resetAllGroups() {
   const { ref, remove } = await import("firebase/database");
   const db = await getDb();
