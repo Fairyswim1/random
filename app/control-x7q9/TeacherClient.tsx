@@ -25,6 +25,9 @@ export default function TeacherPage() {
   const [gameState, setGameStateLocal] = useState<GameState>(defaultGameState);
   const [groups, setGroups] = useState<{ [id: string]: Group }>({});
   const [numFlips, setNumFlips] = useState(5);
+  // 전체 소요시간 ~10초 고정, 횟수가 많을수록 한 번당 빠름 (최소 150ms)
+  const flipInterval = Math.max(150, Math.round(10000 / numFlips));
+  const transitionDuration = Math.max(0.12, flipInterval / 1000 * 0.7);
   const [isFlipping, setIsFlipping] = useState(false);
   const [coinResult, setCoinResult] = useState<CoinResult | null>(null);
   const [flipLog, setFlipLog] = useState<CoinResult[]>([]);
@@ -86,7 +89,7 @@ export default function TeacherPage() {
         flipHistory: log.map((r) => (r === "heads" ? 1 : -1)),
       });
 
-      await sleep(800);
+      await sleep(flipInterval);
     }
 
     // Done
@@ -100,7 +103,7 @@ export default function TeacherPage() {
     setIsFlipping(false);
     setShowResultBanner(true);
     flippingRef.current = false;
-  }, [numFlips]);
+  }, [numFlips, flipInterval]);
 
   const handleReset = async () => {
     if (!confirm("모든 조의 데이터를 초기화하시겠습니까?")) return;
@@ -156,6 +159,7 @@ export default function TeacherPage() {
               position={gameState.currentPosition}
               isAnimating={isFlipping}
               lastMove={lastMove}
+              transitionDuration={transitionDuration}
             />
           </div>
 
@@ -222,19 +226,23 @@ export default function TeacherPage() {
               <label className="block text-sm font-medium text-gray-600 mb-1">
                 동전 던질 횟수
               </label>
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2">
                 <input
-                  type="range"
+                  type="number"
                   min={1}
-                  max={20}
+                  max={100}
                   value={numFlips}
-                  onChange={(e) => setNumFlips(Number(e.target.value))}
-                  className="flex-1 accent-indigo-600"
+                  onChange={(e) => {
+                    const v = Math.max(1, Math.min(100, Number(e.target.value) || 1));
+                    setNumFlips(v);
+                  }}
+                  className="w-24 border-2 border-indigo-300 rounded-xl px-3 py-2 text-xl font-bold text-indigo-700 text-center focus:outline-none focus:border-indigo-500"
                   disabled={gameState.status === "flipping"}
                 />
-                <span className="w-10 text-center font-bold text-indigo-600 text-lg">
-                  {numFlips}
-                </span>
+                <span className="text-sm text-gray-500">회 (1~100)</span>
+              </div>
+              <div className="mt-1 text-xs text-gray-400">
+                한 번당 {flipInterval}ms · 예상 총 소요 {Math.round(flipInterval * numFlips / 1000)}초
               </div>
             </div>
 
