@@ -143,89 +143,68 @@ export default function TeacherPage() {
         </div>
       </div>
 
-      <div className="max-w-6xl mx-auto px-4 py-6 grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Left: Number Line */}
-        <div className="lg:col-span-2 space-y-4">
-          {/* Number Line Card */}
-          <div className="bg-white rounded-2xl shadow-md p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-bold text-gray-700">📍 수직선 (랜덤워크)</h2>
-              <div className="flex items-center gap-2 text-sm text-gray-500">
-                <span>현재 위치:</span>
-                <span className="font-bold text-2xl text-indigo-600">{gameState.currentPosition}</span>
-              </div>
+      <div className="max-w-7xl mx-auto px-4 py-4 space-y-4">
+
+        {/* ① 수직선 - 풀 너비 */}
+        <div className="bg-white rounded-2xl shadow-md px-8 py-6">
+          <div className="flex items-center justify-between mb-2">
+            <h2 className="text-lg font-bold text-gray-700">📍 수직선 (랜덤워크)</h2>
+            <div className="flex items-center gap-3">
+              {coinResult && (
+                <motion.div
+                  key={flipLog.length}
+                  animate={{ rotateY: [0, 360] }}
+                  transition={{ duration: 0.35 }}
+                  className={`text-2xl font-bold ${coinResult === "heads" ? "text-yellow-600" : "text-blue-600"}`}
+                >
+                  {coinResult === "heads" ? "☀️ 앞면 +1" : "🌙 뒷면 -1"}
+                </motion.div>
+              )}
+              <span className="text-sm text-gray-500">현재 위치</span>
+              <span className="font-black text-4xl text-indigo-600">{gameState.currentPosition}</span>
             </div>
-            <NumberLine
-              position={gameState.currentPosition}
-              isAnimating={isFlipping}
-              lastMove={lastMove}
-              transitionDuration={transitionDuration}
-            />
           </div>
-
-          {/* Flip Log */}
-          {flipLog.length > 0 && (
-            <div className="bg-white rounded-2xl shadow-md p-5">
-              <h3 className="font-bold text-gray-700 mb-3">🪙 동전 기록</h3>
-              <div className="flex flex-wrap gap-2">
-                {flipLog.map((r, i) => (
-                  <motion.span
-                    key={i}
-                    initial={{ scale: 0 }}
-                    animate={{ scale: 1 }}
-                    className={`w-9 h-9 rounded-full flex items-center justify-center text-lg shadow
-                      ${r === "heads" ? "bg-yellow-100 text-yellow-600" : "bg-blue-100 text-blue-600"}`}
-                  >
-                    {r === "heads" ? "☀️" : "🌙"}
-                  </motion.span>
-                ))}
-              </div>
-              <div className="mt-3 text-sm text-gray-500 flex gap-4">
-                <span>앞면(+1): {flipLog.filter((r) => r === "heads").length}회</span>
-                <span>뒷면(-1): {flipLog.filter((r) => r === "tails").length}회</span>
-              </div>
-            </div>
-          )}
-
-          {/* Result Banner */}
-          <AnimatePresence>
-            {showResultBanner && gameState.status === "results" && (
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0 }}
-                className="bg-gradient-to-r from-yellow-400 to-orange-400 rounded-2xl p-6 text-white shadow-lg text-center"
-              >
-                <div className="text-5xl mb-2">🎯</div>
-                <div className="text-2xl font-bold">
-                  최종 위치: {gameState.result}번
-                </div>
-                <div className="text-lg mt-1 opacity-90">
-                  {Object.values(groups).filter(
-                    (g) => (g.bets?.[String(gameState.result)] ?? 0) > 0
-                  ).length > 0
-                    ? `정답 조: ${Object.values(groups)
-                        .filter((g) => (g.bets?.[String(gameState.result)] ?? 0) > 0)
-                        .map((g) => g.name)
-                        .join(", ")}`
-                    : "정답 조 없음"}
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
+          <NumberLine
+            position={gameState.currentPosition}
+            isAnimating={isFlipping}
+            lastMove={lastMove}
+            transitionDuration={transitionDuration}
+          />
         </div>
 
-        {/* Right: Controls + Leaderboard */}
-        <div className="space-y-4">
-          {/* Control Panel */}
+        {/* Result Banner */}
+        <AnimatePresence>
+          {showResultBanner && gameState.status === "results" && (
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0 }}
+              className="bg-gradient-to-r from-yellow-400 to-orange-400 rounded-2xl px-8 py-5 text-white shadow-lg flex items-center justify-between"
+            >
+              <div className="flex items-center gap-4">
+                <span className="text-5xl">🎯</span>
+                <div>
+                  <div className="text-2xl font-bold">최종 위치: {gameState.result}번</div>
+                  <div className="text-lg opacity-90">
+                    {Object.values(groups).filter((g) => (g.bets?.[String(gameState.result)] ?? 0) > 0).length > 0
+                      ? `정답 조: ${Object.values(groups).filter((g) => (g.bets?.[String(gameState.result)] ?? 0) > 0).map((g) => g.name).join(", ")}`
+                      : "정답 조 없음"}
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* ② 하단: 제어판 + 동전기록 + 순위표 */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+
+          {/* 게임 제어 */}
           <div className="bg-white rounded-2xl shadow-md p-5 space-y-4">
             <h2 className="text-lg font-bold text-gray-700">🎮 게임 제어</h2>
 
-            {/* Flip count */}
             <div>
-              <label className="block text-sm font-medium text-gray-600 mb-1">
-                동전 던질 횟수
-              </label>
+              <label className="block text-sm font-medium text-gray-600 mb-1">동전 던질 횟수</label>
               <div className="flex items-center gap-2">
                 <input
                   type="number"
@@ -239,28 +218,19 @@ export default function TeacherPage() {
                   className="w-24 border-2 border-indigo-300 rounded-xl px-3 py-2 text-xl font-bold text-indigo-700 text-center focus:outline-none focus:border-indigo-500"
                   disabled={gameState.status === "flipping"}
                 />
-                <span className="text-sm text-gray-500">회 (1~100)</span>
+                <span className="text-sm text-gray-500">회</span>
               </div>
               <div className="mt-1 text-xs text-gray-400">
-                한 번당 {flipInterval}ms · 예상 총 소요 {Math.round(flipInterval * numFlips / 1000)}초
+                한 번당 {flipInterval}ms · 총 약 {Math.round(flipInterval * numFlips / 1000)}초
               </div>
             </div>
 
-            {/* Betting status */}
             {gameState.status === "betting" && (
               <div className="bg-yellow-50 rounded-xl p-3 text-sm text-yellow-800">
-                <div className="font-semibold">베팅 현황</div>
-                <div>{submittedCount} / {totalGroups}조 제출 완료</div>
+                <div className="font-semibold">베팅 현황 {submittedCount}/{totalGroups}조</div>
                 <div className="mt-2 flex flex-wrap gap-1">
                   {Object.entries(groups).map(([id, g]) => (
-                    <span
-                      key={id}
-                      className={`px-2 py-0.5 rounded-full text-xs font-medium ${
-                        g.submitted
-                          ? "bg-green-200 text-green-800"
-                          : "bg-gray-200 text-gray-600"
-                      }`}
-                    >
+                    <span key={id} className={`px-2 py-0.5 rounded-full text-xs font-medium ${g.submitted ? "bg-green-200 text-green-800" : "bg-gray-200 text-gray-600"}`}>
                       {g.name} {g.submitted ? "✓" : "…"}
                     </span>
                   ))}
@@ -268,68 +238,62 @@ export default function TeacherPage() {
               </div>
             )}
 
-            {/* Action Buttons */}
             <div className="space-y-2">
               {(gameState.status === "idle" || gameState.status === "results") && (
-                <button
-                  onClick={handleNewRound}
-                  className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-xl transition shadow"
-                >
-                  🎲 새 라운드 시작 (베팅 열기)
+                <button onClick={handleNewRound} className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-xl transition shadow">
+                  🎲 새 라운드 시작
                 </button>
               )}
-
               {gameState.status === "betting" && (
-                <button
-                  onClick={handleCloseBetting}
-                  className="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold py-3 rounded-xl transition shadow"
-                >
+                <button onClick={handleCloseBetting} className="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold py-3 rounded-xl transition shadow">
                   🔒 베팅 마감
                 </button>
               )}
-
               {gameState.status === "flipping" && !isFlipping && (
-                <button
-                  onClick={handleFlipAll}
-                  className="w-full bg-green-500 hover:bg-green-600 text-white font-bold py-3 rounded-xl transition shadow animate-pulse"
-                >
+                <button onClick={handleFlipAll} className="w-full bg-green-500 hover:bg-green-600 text-white font-bold py-3 rounded-xl transition shadow animate-pulse">
                   🪙 동전 던지기 시작!
                 </button>
               )}
-
               {isFlipping && (
                 <div className="w-full bg-gray-100 text-gray-500 font-bold py-3 rounded-xl text-center text-sm">
-                  ⏳ 동전 던지는 중... ({flipLog.length}/{numFlips})
+                  ⏳ 던지는 중... ({flipLog.length}/{numFlips})
                 </div>
               )}
-
-              <button
-                onClick={handleReset}
-                className="w-full bg-red-100 hover:bg-red-200 text-red-600 font-medium py-2 rounded-xl transition text-sm"
-              >
+              <button onClick={handleReset} className="w-full bg-red-100 hover:bg-red-200 text-red-600 font-medium py-2 rounded-xl transition text-sm">
                 🗑️ 전체 초기화
               </button>
             </div>
           </div>
 
-          {/* Coin visual */}
-          {coinResult && (
-            <div className="bg-white rounded-2xl shadow-md p-4 text-center">
-              <motion.div
-                key={flipLog.length}
-                animate={{ rotateY: [0, 360] }}
-                transition={{ duration: 0.4 }}
-                className="text-5xl mb-2"
-              >
-                {coinResult === "heads" ? "☀️" : "🌙"}
-              </motion.div>
-              <div className={`font-bold ${coinResult === "heads" ? "text-yellow-600" : "text-blue-600"}`}>
-                {coinResult === "heads" ? "앞면 +1" : "뒷면 -1"}
-              </div>
-            </div>
-          )}
+          {/* 동전 기록 */}
+          <div className="bg-white rounded-2xl shadow-md p-5">
+            <h3 className="font-bold text-gray-700 mb-3">🪙 동전 기록</h3>
+            {flipLog.length === 0 ? (
+              <div className="text-gray-300 text-sm text-center py-8">동전을 던지면 여기에 기록됩니다</div>
+            ) : (
+              <>
+                <div className="flex flex-wrap gap-1.5 max-h-48 overflow-y-auto">
+                  {flipLog.map((r, i) => (
+                    <motion.span
+                      key={i}
+                      initial={{ scale: 0 }}
+                      animate={{ scale: 1 }}
+                      className={`w-8 h-8 rounded-full flex items-center justify-center text-base shadow
+                        ${r === "heads" ? "bg-yellow-100 text-yellow-600" : "bg-blue-100 text-blue-600"}`}
+                    >
+                      {r === "heads" ? "☀️" : "🌙"}
+                    </motion.span>
+                  ))}
+                </div>
+                <div className="mt-3 text-sm text-gray-500 flex gap-4">
+                  <span>☀️ {flipLog.filter((r) => r === "heads").length}회</span>
+                  <span>🌙 {flipLog.filter((r) => r === "tails").length}회</span>
+                </div>
+              </>
+            )}
+          </div>
 
-          {/* Leaderboard */}
+          {/* 순위표 */}
           <div className="bg-white rounded-2xl shadow-md p-5">
             <h2 className="text-lg font-bold text-gray-700 mb-3">🏆 순위표</h2>
             <LeaderBoard
