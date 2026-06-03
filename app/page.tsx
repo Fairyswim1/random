@@ -24,7 +24,7 @@ export default function Home() {
           initial={{ opacity: 0, x: -30 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.6, delay: 0.2 }}
-          onClick={() => router.push("/teacher")}
+          onClick={() => router.push("/control-x7q9")}
           className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl p-8 shadow-lg hover:shadow-xl transition-all flex flex-col items-center gap-3"
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.97 }}
