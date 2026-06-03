@@ -28,9 +28,9 @@ export default function TeacherPage() {
   const [gameState, setGameStateLocal] = useState<GameState>(defaultGameState);
   const [groups, setGroups] = useState<{ [id: string]: Group }>({});
   const [numFlips, setNumFlips] = useState(5);
-  // 전체 소요시간 무조건 3초 고정
-  const flipInterval = Math.max(30, Math.round(3000 / numFlips));
-  const transitionDuration = Math.max(0.025, flipInterval / 1000 * 0.65);
+  // 전체 소요시간 무조건 2초 고정 (Firebase 호출 없이 로컬 애니메이션만)
+  const flipInterval = Math.max(20, Math.round(2000 / numFlips));
+  const transitionDuration = Math.max(0.018, flipInterval / 1000 * 0.6);
   const [isFlipping, setIsFlipping] = useState(false);
   const [coinResult, setCoinResult] = useState<CoinResult | null>(null);
   const [flipLog, setFlipLog] = useState<CoinResult[]>([]);
@@ -84,19 +84,23 @@ export default function TeacherPage() {
       pos = Math.max(-10, Math.min(10, pos + move));
       log.push(result);
 
+      // 로컬 상태만 즉시 업데이트 (Firebase 기다리지 않음 → 빠른 애니메이션)
       setCoinResult(result);
       setLastMove(move);
       setFlipLog([...log]);
 
-      await updateGameState({
-        currentPosition: pos,
-        flipHistory: log.map((r) => (r === "heads" ? 1 : -1)),
-      });
+      // Firebase는 5번마다 또는 마지막에만 업데이트
+      if ((i + 1) % 5 === 0 || i === numFlips - 1) {
+        updateGameState({
+          currentPosition: pos,
+          flipHistory: log.map((r) => (r === "heads" ? 1 : -1)),
+        }); // await 없이 fire-and-forget
+      }
 
       await sleep(flipInterval);
     }
 
-    // Done
+    // Done - Firebase 최종 결과 업데이트
     await processResults(pos);
     await updateGameState({
       result: pos,
@@ -234,7 +238,7 @@ export default function TeacherPage() {
                 <span className="text-sm text-gray-500">회</span>
               </div>
               <div className="mt-1 text-xs text-gray-400">
-                한 번당 {flipInterval}ms · 총 약 {Math.round(flipInterval * numFlips / 1000)}초 (기준: 3초)
+                한 번당 {flipInterval}ms · 총 약 {Math.round(flipInterval * numFlips / 1000)}초
               </div>
             </div>
 
