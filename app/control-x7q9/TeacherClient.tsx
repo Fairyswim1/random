@@ -34,7 +34,6 @@ export default function TeacherPage() {
   const [coinResult, setCoinResult] = useState<CoinResult | null>(null);
   const [flipLog, setFlipLog] = useState<CoinResult[]>([]);
   const [lastMove, setLastMove] = useState<number | null>(null);
-  const [showResultBanner, setShowResultBanner] = useState(false);
   const flippingRef = useRef(false);
 
   useEffect(() => {
@@ -59,7 +58,6 @@ export default function TeacherPage() {
     await resetBets();
     setFlipLog([]);
     setCoinResult(null);
-    setShowResultBanner(false);
   };
 
   const handleCloseBetting = async () => {
@@ -105,7 +103,6 @@ export default function TeacherPage() {
     });
 
     setIsFlipping(false);
-    setShowResultBanner(true);
     flippingRef.current = false;
   }, [numFlips]);
 
@@ -115,7 +112,6 @@ export default function TeacherPage() {
     await setGameState(defaultGameState);
     setFlipLog([]);
     setCoinResult(null);
-    setShowResultBanner(false);
   };
 
   const handleStartQuiz = async () => {
@@ -319,7 +315,7 @@ export default function TeacherPage() {
 
           {/* Result Banner */}
           <AnimatePresence>
-            {showResultBanner && gameState.status === "results" && (
+            {gameState.status === "results" && gameState.result !== null && (
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -340,6 +336,12 @@ export default function TeacherPage() {
                         .join(", ")}`
                     : "정답 조 없음"}
                 </div>
+                <button
+                  onClick={handleStartQuiz}
+                  className="mt-5 rounded-xl bg-white px-6 py-3 font-bold text-orange-600 shadow-md transition hover:bg-orange-50"
+                >
+                  다음: 퀴즈 시작
+                </button>
               </motion.div>
             )}
           </AnimatePresence>
