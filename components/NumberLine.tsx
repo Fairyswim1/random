@@ -58,7 +58,7 @@ export default function NumberLine({
         >
           {showMove !== null && (
             <motion.div
-              key={`${position}-${Date.now()}`}
+              key={`${position}-${lastMove}-${showMove}`}
               initial={{ opacity: 1, y: 0 }}
               animate={{ opacity: 0, y: -36 }}
               transition={{ duration: transitionDuration * 0.7 }}

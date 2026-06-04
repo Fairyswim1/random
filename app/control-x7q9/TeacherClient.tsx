@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useRef, useCallback } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import NumberLine from "@/components/NumberLine";
 import LeaderBoard from "@/components/LeaderBoard";
 import CoinFlipAnimation from "@/components/CoinFlipAnimation";
@@ -12,12 +12,16 @@ import {
   setGameState,
   processResults,
   resetBets,
+  resetQuizAnswers,
   resetAllGroups,
   resetCoinsOnly,
   giveCoinsToAll,
+  subscribeQuizAnswers,
   GameState,
   Group,
+  QuizAnswers,
   defaultGameState,
+  quizQuestions,
 } from "@/lib/gameStore";
 import { useRouter } from "next/navigation";
 
@@ -27,6 +31,7 @@ export default function TeacherPage() {
   const router = useRouter();
   const [gameState, setGameStateLocal] = useState<GameState>(defaultGameState);
   const [groups, setGroups] = useState<{ [id: string]: Group }>({});
+  const [quizAnswers, setQuizAnswers] = useState<QuizAnswers>({});
   const [numFlips, setNumFlips] = useState(5);
   // 전체 소요시간 무조건 2초 고정 (Firebase 호출 없이 로컬 애니메이션만)
   const flipInterval = Math.max(20, Math.round(2000 / numFlips));
@@ -35,15 +40,16 @@ export default function TeacherPage() {
   const [coinResult, setCoinResult] = useState<CoinResult | null>(null);
   const [flipLog, setFlipLog] = useState<CoinResult[]>([]);
   const [lastMove, setLastMove] = useState<number | null>(null);
-  const [showResultBanner, setShowResultBanner] = useState(false);
   const flippingRef = useRef(false);
 
   useEffect(() => {
     const unsub1 = subscribeGameState(setGameStateLocal);
     const unsub2 = subscribeGroups(setGroups);
+    const unsub3 = subscribeQuizAnswers(setQuizAnswers);
     return () => {
       unsub1();
       unsub2();
+      unsub3();
     };
   }, []);
 
@@ -59,7 +65,6 @@ export default function TeacherPage() {
     await giveCoinsToAll(10); // 매 라운드 10코인 지급
     setFlipLog([]);
     setCoinResult(null);
-    setShowResultBanner(false);
   };
 
   const handleCloseBetting = async () => {
@@ -109,7 +114,6 @@ export default function TeacherPage() {
     });
 
     setIsFlipping(false);
-    setShowResultBanner(true);
     flippingRef.current = false;
   }, [numFlips, flipInterval]);
 
@@ -119,7 +123,6 @@ export default function TeacherPage() {
     await setGameState({ ...defaultGameState, round: 0 });
     setFlipLog([]);
     setCoinResult(null);
-    setShowResultBanner(false);
   };
 
   const handleReset = async () => {
@@ -128,11 +131,36 @@ export default function TeacherPage() {
     await setGameState(defaultGameState);
     setFlipLog([]);
     setCoinResult(null);
-    setShowResultBanner(false);
+  };
+
+  const handleStartQuiz = async () => {
+    await resetQuizAnswers();
+    await updateGameState({ status: "quiz", quizIndex: 0, quizOpen: true });
+  };
+
+  const handlePrevQuiz = async () => {
+    await updateGameState({ quizIndex: Math.max(0, (gameState.quizIndex ?? 0) - 1), quizOpen: true });
+  };
+
+  const handleNextQuiz = async () => {
+    const nextIndex = Math.min(quizQuestions.length - 1, (gameState.quizIndex ?? 0) + 1);
+    await updateGameState({ quizIndex: nextIndex, quizOpen: true });
+  };
+
+  const handleFinishQuiz = async () => {
+    await updateGameState({ status: "results", quizOpen: false });
   };
 
   const submittedCount = Object.values(groups).filter((g) => g.submitted).length;
   const totalGroups = Object.values(groups).length;
+  const currentQuizIndex = Math.min(gameState.quizIndex ?? 0, quizQuestions.length - 1);
+  const currentQuiz = quizQuestions[currentQuizIndex];
+  const currentQuizAnswers = Object.entries(groups).map(([groupId, group]) => ({
+    groupId,
+    group,
+    answer: quizAnswers[groupId]?.[currentQuiz.id],
+  }));
+  const quizSubmittedCount = currentQuizAnswers.filter((item) => item.answer?.answer).length;
 
   return (
     <main className="min-h-screen bg-gradient-to-br from-indigo-50 to-purple-50">
@@ -150,16 +178,91 @@ export default function TeacherPage() {
             gameState.status === "idle" ? "bg-gray-400" :
             gameState.status === "betting" ? "bg-yellow-400 text-yellow-900" :
             gameState.status === "flipping" ? "bg-orange-400" :
+            gameState.status === "quiz" ? "bg-purple-400 text-purple-950" :
             "bg-green-400 text-green-900"
           }`}>
             {gameState.status === "idle" ? "대기 중" :
              gameState.status === "betting" ? "베팅 진행 중" :
              gameState.status === "flipping" ? "동전 던지는 중" :
+             gameState.status === "quiz" ? "퀴즈 진행 중" :
              "결과 발표"}
           </span>
         </div>
       </div>
 
+      {gameState.status === "results" && gameState.result !== null && (
+        <div className="sticky top-0 z-20 border-b border-purple-300 bg-purple-600 px-4 py-4 shadow-lg">
+          <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-3 sm:flex-row">
+            <div className="text-center text-white sm:text-left">
+              <div className="text-sm font-semibold text-purple-100">게임 결과 확인</div>
+              <div className="text-lg font-bold">최종 위치 {gameState.result}번 · 퀴즈로 이동하세요</div>
+            </div>
+            <button
+              onClick={handleStartQuiz}
+              className="w-full shrink-0 rounded-xl bg-white px-8 py-4 text-lg font-bold text-purple-700 shadow-md transition hover:bg-purple-50 sm:w-auto"
+            >
+              다음 → 퀴즈 시작
+            </button>
+          </div>
+        </div>
+      )}
+
+      {gameState.status === "quiz" ? (
+        <div className="max-w-5xl mx-auto px-4 py-6 space-y-5">
+          <div className="bg-white rounded-2xl shadow-md p-6">
+            <div className="text-sm font-semibold text-purple-600 mb-2">
+              퀴즈 {currentQuizIndex + 1} / {quizQuestions.length}
+            </div>
+            <h2 className="text-2xl font-bold text-gray-800">{currentQuiz.prompt}</h2>
+            <div className="mt-3 flex flex-wrap items-center gap-2">
+              <span className="rounded-full bg-purple-100 px-3 py-1 text-sm font-semibold text-purple-700">
+                {currentQuiz.type === "ox" ? "OX 퀴즈" : "주관식"}
+              </span>
+              {currentQuiz.answer && (
+                <span className="rounded-full bg-green-100 px-3 py-1 text-sm font-semibold text-green-700">
+                  정답: {currentQuiz.answer}
+                </span>
+              )}
+              <span className="rounded-full bg-purple-50 px-3 py-1 text-sm font-semibold text-purple-700">
+                제출 {quizSubmittedCount}/{totalGroups}
+              </span>
+            </div>
+            <div className="mt-6 flex flex-wrap gap-2">
+              <button onClick={handlePrevQuiz} disabled={currentQuizIndex === 0} className="rounded-xl bg-gray-100 px-4 py-2 text-sm font-semibold text-gray-600 disabled:opacity-40">이전 문제</button>
+              <button onClick={handleNextQuiz} disabled={currentQuizIndex === quizQuestions.length - 1} className="rounded-xl bg-purple-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-40">다음 문제</button>
+              <button onClick={handleFinishQuiz} className="rounded-xl bg-green-600 px-4 py-2 text-sm font-semibold text-white">퀴즈 마치기</button>
+            </div>
+          </div>
+          <div className="bg-white rounded-2xl shadow-md p-6">
+            <h3 className="text-lg font-bold text-gray-700 mb-4">모둠별 답안</h3>
+            <div className="grid gap-3">
+              {currentQuizAnswers.length === 0 ? (
+                <div className="rounded-xl bg-gray-50 p-6 text-center text-gray-500">아직 입장한 모둠이 없습니다.</div>
+              ) : (
+                currentQuizAnswers.map(({ groupId, group, answer }) => {
+                  const isCorrect = currentQuiz.answer ? answer?.answer === currentQuiz.answer : null;
+                  return (
+                    <div key={groupId} className="rounded-xl border border-gray-100 bg-gray-50 p-4">
+                      <div className="mb-2 flex items-center justify-between">
+                        <div className="font-bold text-gray-800">{group.name}</div>
+                        <span className={`rounded-full px-3 py-1 text-xs font-semibold ${answer ? "bg-green-100 text-green-700" : "bg-gray-200 text-gray-500"}`}>
+                          {answer ? "제출 완료" : "미제출"}
+                        </span>
+                      </div>
+                      <div className="text-gray-700">{answer?.answer ?? "아직 답안이 없습니다."}</div>
+                      {isCorrect !== null && answer && (
+                        <div className={`mt-2 text-sm font-semibold ${isCorrect ? "text-green-600" : "text-red-500"}`}>
+                          {isCorrect ? "정답" : "오답"}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          </div>
+        </div>
+      ) : (
       <div className="max-w-7xl mx-auto px-4 py-4 space-y-4">
 
         {/* ① 수직선 - 풀 너비 */}
@@ -189,15 +292,11 @@ export default function TeacherPage() {
           />
         </div>
 
-        {/* Result Banner */}
-        <AnimatePresence>
-          {showResultBanner && gameState.status === "results" && (
-            <motion.div
-              initial={{ opacity: 0, y: -10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0 }}
-              className="bg-gradient-to-r from-yellow-400 to-orange-400 rounded-2xl px-8 py-5 text-white shadow-lg flex items-center justify-between"
-            >
+        {/* 게임 결과 확인 카드 */}
+        {gameState.status === "results" && gameState.result !== null && (
+          <div className="rounded-2xl border-2 border-orange-300 bg-gradient-to-r from-yellow-400 to-orange-400 px-8 py-6 text-white shadow-lg">
+            <h2 className="mb-3 text-center text-xl font-bold">📋 게임 결과 확인</h2>
+            <div className="flex flex-col items-center gap-4 sm:flex-row sm:justify-between">
               <div className="flex items-center gap-4">
                 <span className="text-5xl">🎯</span>
                 <div>
@@ -209,9 +308,15 @@ export default function TeacherPage() {
                   </div>
                 </div>
               </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+              <button
+                onClick={handleStartQuiz}
+                className="w-full shrink-0 rounded-xl bg-white px-8 py-4 text-lg font-bold text-orange-600 shadow-md transition hover:bg-orange-50 sm:w-auto"
+              >
+                다음 → 퀴즈 시작
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* ② 하단: 제어판 + 동전기록 + 순위표 */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
@@ -256,6 +361,14 @@ export default function TeacherPage() {
             )}
 
             <div className="space-y-2">
+              {gameState.status === "results" && (
+                <button
+                  onClick={handleStartQuiz}
+                  className="w-full rounded-xl bg-purple-600 py-4 text-lg font-bold text-white shadow-lg transition hover:bg-purple-700"
+                >
+                  다음 → 퀴즈 시작
+                </button>
+              )}
               {(gameState.status === "idle" || gameState.status === "results") && (
                 <button onClick={handleNewRound} className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-xl transition shadow">
                   🎲 새 라운드 시작
@@ -330,6 +443,7 @@ export default function TeacherPage() {
           </div>
         </div>
       </div>
+      )}
     </main>
   );
 }

@@ -1,7 +1,7 @@
 "use client";
 
 import { motion, AnimatePresence } from "framer-motion";
-import { useState, useEffect } from "react";
+import { useEffect } from "react";
 
 interface CoinFlipDisplayProps {
   isFlipping: boolean;
@@ -10,24 +10,19 @@ interface CoinFlipDisplayProps {
 }
 
 export default function CoinFlipDisplay({ isFlipping, result, onFlipComplete }: CoinFlipDisplayProps) {
-  const [flipping, setFlipping] = useState(false);
-
   useEffect(() => {
-    if (isFlipping) {
-      setFlipping(true);
-      const t = setTimeout(() => {
-        setFlipping(false);
-        onFlipComplete?.();
-      }, 600);
-      return () => clearTimeout(t);
-    }
-  }, [isFlipping]);
+    if (!isFlipping) return;
+    const t = setTimeout(() => {
+      onFlipComplete?.();
+    }, 600);
+    return () => clearTimeout(t);
+  }, [isFlipping, onFlipComplete]);
 
   return (
     <div className="flex flex-col items-center gap-2">
       <motion.div
         animate={
-          flipping
+          isFlipping
             ? { rotateY: [0, 180, 360, 540, 720], scale: [1, 1.2, 1] }
             : { rotateY: 0, scale: 1 }
         }
@@ -38,7 +33,7 @@ export default function CoinFlipDisplay({ isFlipping, result, onFlipComplete }: 
         {result === "tails" ? "🌙" : "☀️"}
       </motion.div>
       <AnimatePresence mode="wait">
-        {result && !flipping && (
+        {result && !isFlipping && (
           <motion.div
             key={result}
             initial={{ opacity: 0, scale: 0.5 }}
