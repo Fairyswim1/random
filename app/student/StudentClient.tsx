@@ -6,61 +6,68 @@ import NumberLine from "@/components/NumberLine";
 import {
   subscribeGameState,
   subscribeGroups,
+  subscribeQuizAnswers,
   registerGroup,
   submitBet,
+  submitQuizAnswer,
   GameState,
   Group,
   GroupBet,
+  QuizAnswers,
   defaultGameState,
+  quizQuestions,
 } from "@/lib/gameStore";
 import { useRouter } from "next/navigation";
 
 const POSITIONS = Array.from({ length: 21 }, (_, i) => i - 10);
 
+const getSavedGroupValue = (key: "groupId" | "groupName") => {
+  if (typeof window === "undefined") return "";
+  return sessionStorage.getItem(key) ?? "";
+};
+
 export default function StudentPage() {
   const router = useRouter();
   const [gameState, setGameState] = useState<GameState>(defaultGameState);
   const [groups, setGroups] = useState<{ [id: string]: Group }>({});
+  const [quizAnswers, setQuizAnswers] = useState<QuizAnswers>({});
 
   // Group setup
-  const [groupId, setGroupId] = useState<string>("");
-  const [groupName, setGroupName] = useState<string>("");
-  const [joined, setJoined] = useState(false);
+  const [groupId, setGroupId] = useState<string>(() => getSavedGroupValue("groupId"));
+  const [groupName, setGroupName] = useState<string>(() => getSavedGroupValue("groupName"));
+  const [joined, setJoined] = useState(() => Boolean(getSavedGroupValue("groupId") && getSavedGroupValue("groupName")));
   const [groupIdInput, setGroupIdInput] = useState("");
   const [groupNameInput, setGroupNameInput] = useState("");
 
   // Betting
-  const [bets, setBets] = useState<GroupBet>({});
+  const [betDrafts, setBetDrafts] = useState<Record<number, GroupBet>>({});
   const [betError, setBetError] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [quizDrafts, setQuizDrafts] = useState<Record<string, string>>({});
+  const [quizError, setQuizError] = useState("");
+  const [submittingQuiz, setSubmittingQuiz] = useState(false);
 
   useEffect(() => {
     const unsub1 = subscribeGameState(setGameState);
     const unsub2 = subscribeGroups(setGroups);
+    const unsub3 = subscribeQuizAnswers(setQuizAnswers);
     return () => {
       unsub1();
       unsub2();
+      unsub3();
     };
   }, []);
 
-  // Restore joined state from sessionStorage
-  useEffect(() => {
-    const savedId = sessionStorage.getItem("groupId");
-    const savedName = sessionStorage.getItem("groupName");
-    if (savedId && savedName) {
-      setGroupId(savedId);
-      setGroupName(savedName);
-      setJoined(true);
-    }
-  }, []);
-
-  // Reset bets when new round starts
-  useEffect(() => {
-    setBets({});
-    setBetError("");
-  }, [gameState.round]);
-
   const myGroup: Group | null = joined ? groups[groupId] ?? null : null;
+  const currentQuizIndex = Math.min(gameState.quizIndex ?? 0, quizQuestions.length - 1);
+  const currentQuiz = quizQuestions[currentQuizIndex];
+  const myQuizAnswer = joined ? quizAnswers[groupId]?.[currentQuiz.id] : undefined;
+  const quizAnswer = quizDrafts[currentQuiz.id] ?? "";
+  const bets = betDrafts[gameState.round] ?? {};
+  const setCurrentQuizAnswer = (answer: string) => {
+    setQuizDrafts((prev) => ({ ...prev, [currentQuiz.id]: answer }));
+    setQuizError("");
+  };
 
   const handleJoin = async () => {
     if (!groupIdInput.trim() || !groupNameInput.trim()) {
@@ -84,7 +91,13 @@ export default function StudentPage() {
     const delta = value - current;
     if (delta > 0 && availableCoins < delta) return;
     if (value < 0) return;
-    setBets((prev) => ({ ...prev, [pos.toString()]: value }));
+    setBetDrafts((prev) => ({
+      ...prev,
+      [gameState.round]: {
+        ...(prev[gameState.round] ?? {}),
+        [pos.toString()]: value,
+      },
+    }));
   };
 
   const handleSubmit = async () => {
@@ -108,6 +121,23 @@ export default function StudentPage() {
       setBetError(e instanceof Error ? e.message : "오류가 발생했습니다");
     }
     setSubmitting(false);
+  };
+
+  const handleSubmitQuiz = async () => {
+    const answer = currentQuiz.type === "ox" ? quizAnswer : quizAnswer.trim();
+    if (!answer) {
+      setQuizError("답안을 입력하세요");
+      return;
+    }
+
+    setSubmittingQuiz(true);
+    try {
+      await submitQuizAnswer(groupId, currentQuiz.id, answer);
+      setQuizError("");
+    } catch (e: unknown) {
+      setQuizError(e instanceof Error ? e.message : "오류가 발생했습니다");
+    }
+    setSubmittingQuiz(false);
   };
 
   // Status displays
@@ -183,22 +213,96 @@ export default function StudentPage() {
 
       <div className="max-w-2xl mx-auto px-4 py-6 space-y-4">
         {/* Number Line (read-only) */}
-        <div className="bg-white rounded-2xl shadow-md p-5">
-          <h2 className="font-bold text-gray-700 mb-3">📍 현재 수직선 상태</h2>
-          <NumberLine
-            position={gameState.currentPosition}
-            isAnimating={gameState.status === "flipping"}
-            lastMove={null}
-          />
-          <div className="mt-2 text-center text-sm text-gray-500">
-            {gameState.status === "flipping" && "🎲 동전이 던져지고 있어요!"}
-            {gameState.status === "betting" && gameState.bettingOpen && "💭 어느 위치를 예측하나요?"}
-            {gameState.status === "results" && `🎯 최종 위치: ${gameState.result}번`}
+        {gameState.status !== "quiz" && (
+          <div className="bg-white rounded-2xl shadow-md p-5">
+            <h2 className="font-bold text-gray-700 mb-3">📍 현재 수직선 상태</h2>
+            <NumberLine
+              position={gameState.currentPosition}
+              isAnimating={gameState.status === "flipping"}
+              lastMove={null}
+            />
+            <div className="mt-2 text-center text-sm text-gray-500">
+              {gameState.status === "flipping" && "🎲 동전이 던져지고 있어요!"}
+              {gameState.status === "betting" && gameState.bettingOpen && "💭 어느 위치를 예측하나요?"}
+              {gameState.status === "results" && `🎯 최종 위치: ${gameState.result}번`}
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Status-based content */}
         <AnimatePresence mode="wait">
+          {/* QUIZ */}
+          {gameState.status === "quiz" && (
+            <motion.div
+              key={`quiz-${currentQuiz.id}`}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0 }}
+              className="bg-white rounded-2xl shadow-md p-6"
+            >
+              <div className="mb-4 flex items-center justify-between gap-3">
+                <div>
+                  <div className="text-sm font-semibold text-purple-600">
+                    퀴즈 {currentQuizIndex + 1} / {quizQuestions.length}
+                  </div>
+                  <h2 className="mt-1 text-xl font-bold text-gray-800">{currentQuiz.prompt}</h2>
+                </div>
+                <span className="shrink-0 rounded-full bg-purple-100 px-3 py-1 text-sm font-semibold text-purple-700">
+                  {currentQuiz.type === "ox" ? "OX" : "주관식"}
+                </span>
+              </div>
+
+              {myQuizAnswer ? (
+                <div className="rounded-2xl bg-green-50 p-6 text-center">
+                  <div className="text-5xl mb-3">✅</div>
+                  <div className="text-xl font-bold text-green-700">답안 제출 완료!</div>
+                  <div className="mt-3 rounded-xl bg-white px-4 py-3 text-gray-700 shadow-sm">
+                    {myQuizAnswer.answer}
+                  </div>
+                  <div className="mt-2 text-sm text-green-600">선생님이 다음 문제로 넘길 때까지 기다려주세요.</div>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {currentQuiz.type === "ox" ? (
+                    <div className="grid grid-cols-2 gap-3">
+                      {["O", "X"].map((choice) => (
+                        <button
+                          key={choice}
+                          onClick={() => setCurrentQuizAnswer(choice)}
+                          className={`rounded-2xl border-2 py-8 text-4xl font-black transition ${
+                            quizAnswer === choice
+                              ? "border-purple-500 bg-purple-100 text-purple-700"
+                              : "border-gray-200 bg-gray-50 text-gray-400 hover:bg-purple-50"
+                          }`}
+                        >
+                          {choice}
+                        </button>
+                      ))}
+                    </div>
+                  ) : (
+                    <textarea
+                      value={quizAnswer}
+                      onChange={(e) => setCurrentQuizAnswer(e.target.value)}
+                      placeholder="모둠의 생각을 적어주세요"
+                      rows={5}
+                      className="w-full resize-none rounded-2xl border border-gray-300 px-4 py-3 text-gray-800 focus:outline-none focus:ring-2 focus:ring-purple-400"
+                    />
+                  )}
+
+                  {quizError && <p className="text-sm text-red-500">{quizError}</p>}
+
+                  <button
+                    onClick={handleSubmitQuiz}
+                    disabled={submittingQuiz || !quizAnswer}
+                    className="w-full rounded-xl bg-purple-600 py-3 font-bold text-white shadow transition hover:bg-purple-700 disabled:bg-gray-300"
+                  >
+                    {submittingQuiz ? "제출 중..." : "답안 제출"}
+                  </button>
+                </div>
+              )}
+            </motion.div>
+          )}
+
           {/* IDLE */}
           {gameState.status === "idle" && (
             <motion.div
@@ -312,7 +416,7 @@ export default function StudentPage() {
           )}
 
           {/* Submitted - waiting for flip */}
-          {myGroup?.submitted && gameState.status !== "results" && (
+          {myGroup?.submitted && gameState.status !== "results" && gameState.status !== "quiz" && (
             <motion.div
               key="submitted"
               initial={{ opacity: 0, scale: 0.9 }}

@@ -1,6 +1,6 @@
 "use client";
 
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import { useEffect, useState } from "react";
 
 interface NumberLineProps {
@@ -13,7 +13,6 @@ const CHARACTER_FRAMES = ["🐣", "🐤", "🐥"];
 
 export default function NumberLine({ position, isAnimating, lastMove }: NumberLineProps) {
   const [charFrame, setCharFrame] = useState(0);
-  const [showMove, setShowMove] = useState<number | null>(null);
 
   useEffect(() => {
     if (isAnimating) {
@@ -26,14 +25,6 @@ export default function NumberLine({ position, isAnimating, lastMove }: NumberLi
       return () => clearInterval(interval);
     }
   }, [isAnimating]);
-
-  useEffect(() => {
-    if (lastMove !== null) {
-      setShowMove(lastMove);
-      const t = setTimeout(() => setShowMove(null), 700);
-      return () => clearTimeout(t);
-    }
-  }, [lastMove, position]);
 
   const MIN = -10;
   const MAX = 10;
@@ -56,14 +47,15 @@ export default function NumberLine({ position, isAnimating, lastMove }: NumberLi
               transition: "left 0.5s cubic-bezier(0.34,1.56,0.64,1)",
             }}
           >
-            {showMove !== null && (
+            {lastMove !== null && (
               <motion.div
+                key={`${position}-${lastMove}`}
                 initial={{ opacity: 1, y: 0 }}
                 animate={{ opacity: 0, y: -24 }}
                 transition={{ duration: 0.6 }}
-                className={`text-lg font-bold mb-1 ${showMove > 0 ? "text-green-500" : "text-red-500"}`}
+                className={`text-lg font-bold mb-1 ${lastMove > 0 ? "text-green-500" : "text-red-500"}`}
               >
-                {showMove > 0 ? "+1" : "-1"}
+                {lastMove > 0 ? "+1" : "-1"}
               </motion.div>
             )}
             <motion.div
