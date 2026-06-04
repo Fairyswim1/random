@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useRef, useCallback } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import NumberLine from "@/components/NumberLine";
 import LeaderBoard from "@/components/LeaderBoard";
 import {
@@ -171,6 +171,25 @@ export default function TeacherPage() {
         </div>
       </div>
 
+      {gameState.status === "results" && gameState.result !== null && (
+        <div className="sticky top-0 z-20 border-b border-purple-200 bg-purple-600 px-4 py-4 shadow-lg">
+          <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-3 sm:flex-row">
+            <div className="text-center text-white sm:text-left">
+              <div className="text-sm font-semibold text-purple-100">게임 결과 확인</div>
+              <div className="text-lg font-bold">
+                최종 위치 {gameState.result}번 · 퀴즈로 이동할 준비가 되었습니다
+              </div>
+            </div>
+            <button
+              onClick={handleStartQuiz}
+              className="w-full shrink-0 rounded-xl bg-white px-8 py-4 text-lg font-bold text-purple-700 shadow-md transition hover:bg-purple-50 sm:w-auto"
+            >
+              다음 → 퀴즈 시작
+            </button>
+          </div>
+        </div>
+      )}
+
       {gameState.status === "quiz" ? (
         <div className="max-w-5xl mx-auto px-4 py-6 space-y-5">
           <div className="bg-white rounded-2xl shadow-md p-6">
@@ -313,15 +332,11 @@ export default function TeacherPage() {
             </div>
           )}
 
-          {/* Result Banner */}
-          <AnimatePresence>
-            {gameState.status === "results" && gameState.result !== null && (
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0 }}
-                className="bg-gradient-to-r from-yellow-400 to-orange-400 rounded-2xl p-6 text-white shadow-lg text-center"
-              >
+          {/* Result confirmation card */}
+          {gameState.status === "results" && gameState.result !== null && (
+            <div className="rounded-2xl border-2 border-orange-300 bg-gradient-to-r from-yellow-400 to-orange-400 p-6 text-white shadow-lg">
+              <h2 className="mb-4 text-center text-xl font-bold">📋 게임 결과 확인</h2>
+              <div className="text-center">
                 <div className="text-5xl mb-2">🎯</div>
                 <div className="text-2xl font-bold">
                   최종 위치: {gameState.result}번
@@ -338,13 +353,13 @@ export default function TeacherPage() {
                 </div>
                 <button
                   onClick={handleStartQuiz}
-                  className="mt-5 rounded-xl bg-white px-6 py-3 font-bold text-orange-600 shadow-md transition hover:bg-orange-50"
+                  className="mt-5 w-full rounded-xl bg-white px-6 py-4 text-lg font-bold text-orange-600 shadow-md transition hover:bg-orange-50 sm:w-auto"
                 >
-                  다음: 퀴즈 시작
+                  다음 → 퀴즈 시작
                 </button>
-              </motion.div>
-            )}
-          </AnimatePresence>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Right: Controls + Leaderboard */}
@@ -398,21 +413,21 @@ export default function TeacherPage() {
 
             {/* Action Buttons */}
             <div className="space-y-2">
+              {gameState.status === "results" && (
+                <button
+                  onClick={handleStartQuiz}
+                  className="w-full rounded-xl bg-purple-600 py-4 text-lg font-bold text-white shadow-lg transition hover:bg-purple-700"
+                >
+                  다음 → 퀴즈 시작
+                </button>
+              )}
+
               {(gameState.status === "idle" || gameState.status === "results") && (
                 <button
                   onClick={handleNewRound}
                   className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-xl transition shadow"
                 >
                   🎲 새 라운드 시작 (베팅 열기)
-                </button>
-              )}
-
-              {gameState.status === "results" && (
-                <button
-                  onClick={handleStartQuiz}
-                  className="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 rounded-xl transition shadow"
-                >
-                  다음: 퀴즈 시작
                 </button>
               )}
 
