@@ -16,6 +16,7 @@ import {
   QuizAnswers,
   defaultGameState,
   quizQuestions,
+  PADLET_ACTIVITY_URL,
 } from "@/lib/gameStore";
 import { useRouter } from "next/navigation";
 
@@ -84,6 +85,12 @@ export default function StudentPage() {
     setBets({});
     setBetError("");
   }, [gameState.round]);
+
+  useEffect(() => {
+    if (joined && gameState.status === "padlet") {
+      window.location.href = PADLET_ACTIVITY_URL;
+    }
+  }, [joined, gameState.status]);
 
   const myGroup: Group | null = joined ? groups[groupId] ?? null : null;
   const currentQuizIndex = Math.min(gameState.quizIndex ?? 0, quizQuestions.length - 1);
@@ -228,7 +235,7 @@ export default function StudentPage() {
 
       <div className="max-w-2xl mx-auto px-4 py-6 space-y-4">
         {/* Number Line (read-only) */}
-        {gameState.status !== "quiz" && (
+        {gameState.status !== "quiz" && gameState.status !== "padlet" && (
         <div className="bg-white rounded-2xl shadow-md p-5">
           <h2 className="font-bold text-gray-700 mb-3">📍 현재 수직선 상태</h2>
           <NumberLine
@@ -246,6 +253,27 @@ export default function StudentPage() {
 
         {/* Status-based content */}
         <AnimatePresence mode="wait">
+          {gameState.status === "padlet" && (
+            <motion.div
+              key="padlet"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="rounded-2xl bg-teal-50 p-8 text-center shadow-md"
+            >
+              <div className="text-5xl mb-4">🚀</div>
+              <div className="text-xl font-bold text-teal-800">패들렛으로 이동 중...</div>
+              <p className="mt-2 text-sm text-teal-600">
+                자동으로 열리지 않으면 아래 버튼을 눌러주세요.
+              </p>
+              <a
+                href={PADLET_ACTIVITY_URL}
+                className="mt-5 inline-block rounded-xl bg-teal-600 px-6 py-3 font-bold text-white shadow transition hover:bg-teal-700"
+              >
+                로봇 탐사 시뮬레이터 열기
+              </a>
+            </motion.div>
+          )}
+
           {gameState.status === "quiz" && (
             <motion.div
               key={`quiz-${currentQuiz.id}`}
@@ -428,7 +456,7 @@ export default function StudentPage() {
           )}
 
           {/* Submitted - waiting for flip */}
-          {myGroup?.submitted && gameState.status !== "results" && gameState.status !== "quiz" && (
+          {myGroup?.submitted && gameState.status !== "results" && gameState.status !== "quiz" && gameState.status !== "padlet" && (
             <motion.div
               key="submitted"
               initial={{ opacity: 0, scale: 0.9 }}

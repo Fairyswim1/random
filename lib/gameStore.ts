@@ -1,6 +1,9 @@
 import { getDb } from "./firebase";
 
-export type GameStatus = "idle" | "betting" | "flipping" | "results" | "quiz";
+export type GameStatus = "idle" | "betting" | "flipping" | "results" | "quiz" | "padlet";
+
+export const PADLET_ACTIVITY_URL =
+  "https://padlet.com/lhj3534/padlet-gzep97hk2pixyu1t";
 export type QuizQuestionType = "ox" | "short";
 
 export interface QuizQuestion {

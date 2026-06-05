@@ -22,6 +22,7 @@ import {
   QuizAnswers,
   defaultGameState,
   quizQuestions,
+  PADLET_ACTIVITY_URL,
 } from "@/lib/gameStore";
 import { useRouter } from "next/navigation";
 
@@ -147,8 +148,9 @@ export default function TeacherPage() {
     await updateGameState({ quizIndex: nextIndex, quizOpen: true });
   };
 
-  const handleFinishQuiz = async () => {
-    await updateGameState({ status: "results", quizOpen: false });
+  const handleGoToPadlet = async () => {
+    await updateGameState({ status: "padlet", quizOpen: false });
+    window.location.href = PADLET_ACTIVITY_URL;
   };
 
   const submittedCount = Object.values(groups).filter((g) => g.submitted).length;
@@ -179,12 +181,14 @@ export default function TeacherPage() {
             gameState.status === "betting" ? "bg-yellow-400 text-yellow-900" :
             gameState.status === "flipping" ? "bg-orange-400" :
             gameState.status === "quiz" ? "bg-purple-400 text-purple-950" :
+            gameState.status === "padlet" ? "bg-teal-400 text-teal-950" :
             "bg-green-400 text-green-900"
           }`}>
             {gameState.status === "idle" ? "대기 중" :
              gameState.status === "betting" ? "베팅 진행 중" :
              gameState.status === "flipping" ? "동전 던지는 중" :
              gameState.status === "quiz" ? "퀴즈 진행 중" :
+             gameState.status === "padlet" ? "패들렛 활동" :
              "결과 발표"}
           </span>
         </div>
@@ -230,7 +234,12 @@ export default function TeacherPage() {
             <div className="mt-6 flex flex-wrap gap-2">
               <button onClick={handlePrevQuiz} disabled={currentQuizIndex === 0} className="rounded-xl bg-gray-100 px-4 py-2 text-sm font-semibold text-gray-600 disabled:opacity-40">이전 문제</button>
               <button onClick={handleNextQuiz} disabled={currentQuizIndex === quizQuestions.length - 1} className="rounded-xl bg-purple-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-40">다음 문제</button>
-              <button onClick={handleFinishQuiz} className="rounded-xl bg-green-600 px-4 py-2 text-sm font-semibold text-white">퀴즈 마치기</button>
+              <button
+                onClick={handleGoToPadlet}
+                className="rounded-xl bg-teal-600 px-6 py-3 text-base font-bold text-white shadow-md transition hover:bg-teal-700"
+              >
+                다음 → 패들렛
+              </button>
             </div>
           </div>
           <div className="bg-white rounded-2xl shadow-md p-6">
