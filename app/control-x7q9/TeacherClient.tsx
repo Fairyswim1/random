@@ -42,9 +42,19 @@ export default function TeacherPage() {
   const [flipLog, setFlipLog] = useState<CoinResult[]>([]);
   const [lastMove, setLastMove] = useState<number | null>(null);
   const flippingRef = useRef(false);
+  const hasNormalizedState = useRef(false);
 
   useEffect(() => {
-    const unsub1 = subscribeGameState(setGameStateLocal);
+    const unsub1 = subscribeGameState((state) => {
+      setGameStateLocal(state);
+      if (!hasNormalizedState.current) {
+        hasNormalizedState.current = true;
+        if (state.status === "quiz" || state.status === "padlet") {
+          void setGameState(defaultGameState);
+          setGameStateLocal(defaultGameState);
+        }
+      }
+    });
     const unsub2 = subscribeGroups(setGroups);
     const unsub3 = subscribeQuizAnswers(setQuizAnswers);
     return () => {
@@ -211,7 +221,7 @@ export default function TeacherPage() {
         </div>
       )}
 
-      {gameState.status === "quiz" ? (
+      {gameState.status === "quiz" && gameState.quizOpen ? (
         <div className="max-w-5xl mx-auto px-4 py-6 space-y-5">
           <div className="bg-white rounded-2xl shadow-md p-6">
             <div className="text-sm font-semibold text-purple-600 mb-2">

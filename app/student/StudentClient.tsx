@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import NumberLine from "@/components/NumberLine";
 import {
@@ -42,6 +42,7 @@ export default function StudentPage() {
   const [quizDrafts, setQuizDrafts] = useState<Record<string, string>>({});
   const [quizError, setQuizError] = useState("");
   const [submittingQuiz, setSubmittingQuiz] = useState(false);
+  const participatedInQuizRef = useRef(false);
 
   useEffect(() => {
     const unsub1 = subscribeGameState(setGameState);
@@ -87,10 +88,13 @@ export default function StudentPage() {
   }, [gameState.round]);
 
   useEffect(() => {
-    if (joined && gameState.status === "padlet") {
+    if (gameState.status === "quiz" && gameState.quizOpen) {
+      participatedInQuizRef.current = true;
+    }
+    if (joined && gameState.status === "padlet" && participatedInQuizRef.current) {
       window.location.href = PADLET_ACTIVITY_URL;
     }
-  }, [joined, gameState.status]);
+  }, [joined, gameState.status, gameState.quizOpen]);
 
   const myGroup: Group | null = joined ? groups[groupId] ?? null : null;
   const currentQuizIndex = Math.min(gameState.quizIndex ?? 0, quizQuestions.length - 1);
@@ -253,7 +257,7 @@ export default function StudentPage() {
 
         {/* Status-based content */}
         <AnimatePresence mode="wait">
-          {gameState.status === "padlet" && (
+          {gameState.status === "padlet" && participatedInQuizRef.current && (
             <motion.div
               key="padlet"
               initial={{ opacity: 0 }}
@@ -274,7 +278,7 @@ export default function StudentPage() {
             </motion.div>
           )}
 
-          {gameState.status === "quiz" && (
+          {gameState.status === "quiz" && gameState.quizOpen && (
             <motion.div
               key={`quiz-${currentQuiz.id}`}
               initial={{ opacity: 0, y: 20 }}
