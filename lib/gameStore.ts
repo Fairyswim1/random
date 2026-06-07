@@ -6,6 +6,8 @@ export const PADLET_ACTIVITY_URL =
   "https://padlet.com/lhj3534/padlet-gzep97hk2pixyu1t";
 export const REQUIRED_BET_PER_ROUND = 10;
 export const MAX_NUM_FLIPS = 1000;
+export const FLIP_TOTAL_MS = 5000;
+export const FLIP_ANIMATION_STEPS = 50;
 export type QuizQuestionType = "ox" | "short";
 
 export interface QuizQuestion {

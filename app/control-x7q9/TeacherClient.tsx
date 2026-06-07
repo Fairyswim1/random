@@ -24,10 +24,18 @@ import {
   quizQuestions,
   PADLET_ACTIVITY_URL,
   MAX_NUM_FLIPS,
+  FLIP_TOTAL_MS,
+  FLIP_ANIMATION_STEPS,
 } from "@/lib/gameStore";
 import { useRouter } from "next/navigation";
 
 type CoinResult = "heads" | "tails";
+
+type FlipSummary = {
+  heads: number;
+  tails: number;
+  progress: number;
+};
 
 export default function TeacherPage() {
   const router = useRouter();
@@ -35,12 +43,12 @@ export default function TeacherPage() {
   const [groups, setGroups] = useState<{ [id: string]: Group }>({});
   const [quizAnswers, setQuizAnswers] = useState<QuizAnswers>({});
   const [numFlips, setNumFlips] = useState(5);
-  // 전체 소요시간 무조건 2초 고정 (Firebase 호출 없이 로컬 애니메이션만)
-  const flipInterval = Math.max(20, Math.round(2000 / numFlips));
-  const transitionDuration = Math.max(0.018, flipInterval / 1000 * 0.6);
+  const flipSteps = Math.min(numFlips, FLIP_ANIMATION_STEPS);
+  const flipStepInterval = FLIP_TOTAL_MS / flipSteps;
+  const transitionDuration = Math.min(0.12, (flipStepInterval / 1000) * 0.6);
   const [isFlipping, setIsFlipping] = useState(false);
   const [coinResult, setCoinResult] = useState<CoinResult | null>(null);
-  const [flipLog, setFlipLog] = useState<CoinResult[]>([]);
+  const [flipSummary, setFlipSummary] = useState<FlipSummary | null>(null);
   const [lastMove, setLastMove] = useState<number | null>(null);
   const flippingRef = useRef(false);
   const hasNormalizedState = useRef(false);
@@ -78,7 +86,7 @@ export default function TeacherPage() {
     if (currentRound >= 1) {
       await giveCoinsToAll(10); // 2라운드부터 기본 10코인 추가 지급
     }
-    setFlipLog([]);
+    setFlipSummary(null);
     setCoinResult(null);
   };
 
@@ -93,50 +101,65 @@ export default function TeacherPage() {
     flippingRef.current = true;
     setIsFlipping(true);
 
+    const results: CoinResult[] = [];
+    const positions: number[] = [0];
+    const cumulativeHeads: number[] = [0];
     let pos = 0;
-    const log: CoinResult[] = [];
 
     for (let i = 0; i < numFlips; i++) {
       const isHeads = Math.random() < 0.5;
-      const move = isHeads ? 1 : -1;
       const result: CoinResult = isHeads ? "heads" : "tails";
-
-      pos = Math.max(-10, Math.min(10, pos + move));
-      log.push(result);
-
-      // 로컬 상태만 즉시 업데이트 (Firebase 기다리지 않음 → 빠른 애니메이션)
-      setCoinResult(result);
-      setLastMove(move);
-      setFlipLog([...log]);
-
-      // Firebase는 5번마다 또는 마지막에만 업데이트
-      if ((i + 1) % 5 === 0 || i === numFlips - 1) {
-        updateGameState({
-          currentPosition: pos,
-          flipHistory: log.map((r) => (r === "heads" ? 1 : -1)),
-        }); // await 없이 fire-and-forget
-      }
-
-      await sleep(flipInterval);
+      pos = Math.max(-10, Math.min(10, pos + (isHeads ? 1 : -1)));
+      results.push(result);
+      positions.push(pos);
+      cumulativeHeads.push(cumulativeHeads[i] + (isHeads ? 1 : 0));
     }
 
-    // Done - Firebase 최종 결과 업데이트
-    await processResults(pos);
+    const finalPos = pos;
+    const finalHeads = cumulativeHeads[numFlips];
+    const finalTails = numFlips - finalHeads;
+    const steps = Math.min(numFlips, FLIP_ANIMATION_STEPS);
+    const stepInterval = FLIP_TOTAL_MS / steps;
+
+    for (let s = 0; s < steps; s++) {
+      const completed = Math.max(1, Math.round(((s + 1) / steps) * numFlips));
+      const result = results[completed - 1];
+      const move = result === "heads" ? 1 : -1;
+      const heads = cumulativeHeads[completed];
+      const tails = completed - heads;
+
+      setCoinResult(result);
+      setLastMove(move);
+      setFlipSummary({ heads, tails, progress: completed });
+
+      updateGameState({
+        currentPosition: positions[completed],
+        flipHistory: Array(completed).fill(0),
+      });
+
+      await sleep(stepInterval);
+    }
+
+    setFlipSummary({ heads: finalHeads, tails: finalTails, progress: numFlips });
+    setCoinResult(results[numFlips - 1]);
+
+    await processResults(finalPos);
     await updateGameState({
-      result: pos,
+      result: finalPos,
       status: "results",
-      currentPosition: pos,
+      currentPosition: finalPos,
+      flipHistory: [],
     });
 
     setIsFlipping(false);
     flippingRef.current = false;
-  }, [numFlips, flipInterval]);
+  }, [numFlips]);
 
   const handleResetCoins = async () => {
     if (!confirm("모든 조의 코인을 10개로 리셋하시겠습니까? (조는 유지됩니다)")) return;
     await resetCoinsOnly();
     await setGameState({ ...defaultGameState, round: 0 });
-    setFlipLog([]);
+    setFlipSummary(null);
     setCoinResult(null);
   };
 
@@ -144,7 +167,7 @@ export default function TeacherPage() {
     if (!confirm("모든 조를 완전히 삭제하시겠습니까? (학생들이 재입장해야 합니다)")) return;
     await resetAllGroups();
     await setGameState(defaultGameState);
-    setFlipLog([]);
+    setFlipSummary(null);
     setCoinResult(null);
   };
 
@@ -193,7 +216,7 @@ export default function TeacherPage() {
   const quizRevealed = gameState.quizRevealed ?? false;
   const hasGradedAnswer = !!currentQuiz.answer;
   const allQuizSubmitted = totalGroups > 0 && quizSubmittedCount >= totalGroups;
-  const answersVisible = hasGradedAnswer ? quizRevealed : allQuizSubmitted;
+  const answersVisible = quizRevealed;
 
   return (
     <main className="min-h-screen bg-gradient-to-br from-indigo-50 to-purple-50">
@@ -261,13 +284,14 @@ export default function TeacherPage() {
             </div>
             <div className="mt-6 flex flex-wrap gap-2">
               <button onClick={handlePrevQuiz} disabled={currentQuizIndex === 0} className="rounded-xl bg-gray-100 px-4 py-2 text-sm font-semibold text-gray-600 disabled:opacity-40">이전 문제</button>
-              {hasGradedAnswer && !quizRevealed && (
+              {!quizRevealed && (
                 <button
                   onClick={handleRevealAnswers}
                   disabled={!allQuizSubmitted}
                   className="rounded-xl bg-green-600 px-4 py-2 text-sm font-semibold text-white shadow-md transition hover:bg-green-700 disabled:opacity-40"
                 >
-                  정답 공개 {allQuizSubmitted ? "" : `(${quizSubmittedCount}/${totalGroups})`}
+                  {hasGradedAnswer ? "정답 공개" : "답안 공개"}
+                  {allQuizSubmitted ? "" : ` (${quizSubmittedCount}/${totalGroups})`}
                 </button>
               )}
               <button onClick={handleNextQuiz} disabled={currentQuizIndex === quizQuestions.length - 1} className="rounded-xl bg-purple-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-40">다음 문제</button>
@@ -302,9 +326,7 @@ export default function TeacherPage() {
                         {answersVisible
                           ? (answer?.answer ?? "아직 답안이 없습니다.")
                           : answer
-                            ? hasGradedAnswer
-                              ? "제출 완료 (답안 숨김)"
-                              : "제출 완료 (전원 제출 후 공개)"
+                            ? "제출 완료 (답안 숨김)"
                             : "아직 답안이 없습니다."}
                       </div>
                       {isCorrect !== null && answer && answersVisible && (
@@ -329,7 +351,7 @@ export default function TeacherPage() {
             <div className="flex items-center gap-3">
               {coinResult && (
                 <motion.div
-                  key={flipLog.length}
+                  key={flipSummary?.progress ?? 0}
                   animate={{ rotateY: [0, 360] }}
                   transition={{ duration: 0.35 }}
                   className={`text-2xl font-bold ${coinResult === "heads" ? "text-yellow-600" : "text-blue-600"}`}
@@ -394,7 +416,7 @@ export default function TeacherPage() {
                 <span className="text-sm text-gray-500">회</span>
               </div>
               <div className="mt-1 text-xs text-gray-400">
-                한 번당 {flipInterval}ms · 총 약 {Math.round(flipInterval * numFlips / 1000)}초
+                애니메이션 총 약 {FLIP_TOTAL_MS / 1000}초 (결과는 즉시 계산)
               </div>
             </div>
 
@@ -429,7 +451,7 @@ export default function TeacherPage() {
               )}
               {isFlipping && (
                 <div className="w-full bg-gray-100 text-gray-500 font-bold py-3 rounded-xl text-center text-sm">
-                  ⏳ 던지는 중... ({flipLog.length}/{numFlips})
+                  ⏳ 던지는 중... ({flipSummary?.progress ?? 0}/{numFlips})
                 </div>
               )}
               <button onClick={handleResetCoins} className="w-full bg-yellow-100 hover:bg-yellow-200 text-yellow-700 font-medium py-2 rounded-xl transition text-sm">
@@ -448,31 +470,21 @@ export default function TeacherPage() {
               <CoinFlipAnimation
                 isFlipping={isFlipping}
                 result={coinResult}
-                flipCount={flipLog.length}
+                flipCount={flipSummary?.progress ?? 0}
               />
             </div>
-            {flipLog.length === 0 ? (
-              <div className="text-gray-300 text-sm text-center py-2">동전을 던지면 여기에 기록됩니다</div>
+            {!flipSummary ? (
+              <div className="text-gray-300 text-sm text-center py-2">동전을 던지면 요약이 표시됩니다</div>
             ) : (
-              <>
-                <div className="flex flex-wrap gap-1.5 max-h-32 overflow-y-auto">
-                  {flipLog.map((r, i) => (
-                    <motion.span
-                      key={i}
-                      initial={{ scale: 0 }}
-                      animate={{ scale: 1 }}
-                      className={`w-8 h-8 rounded-full flex items-center justify-center text-sm shadow
-                        ${r === "heads" ? "bg-yellow-100 text-yellow-600" : "bg-blue-100 text-blue-600"}`}
-                    >
-                      {r === "heads" ? "☀️" : "🌙"}
-                    </motion.span>
-                  ))}
+              <div className="space-y-2 text-center">
+                <div className="text-sm text-gray-500 flex justify-center gap-6">
+                  <span>☀️ 앞면 {flipSummary.heads}회</span>
+                  <span>🌙 뒷면 {flipSummary.tails}회</span>
                 </div>
-                <div className="mt-2 text-sm text-gray-500 flex gap-4">
-                  <span>☀️ {flipLog.filter((r) => r === "heads").length}회</span>
-                  <span>🌙 {flipLog.filter((r) => r === "tails").length}회</span>
+                <div className="text-xs text-gray-400">
+                  총 {numFlips}회 중 {flipSummary.progress}회 진행
                 </div>
-              </>
+              </div>
             )}
           </div>
 
