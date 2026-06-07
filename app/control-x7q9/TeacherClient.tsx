@@ -65,15 +65,18 @@ export default function TeacherPage() {
   }, []);
 
   const handleNewRound = async () => {
+    const currentRound = gameState.round || 0;
     await setGameState({
       ...defaultGameState,
       status: "betting",
       numFlips,
-      round: (gameState.round || 0) + 1,
+      round: currentRound + 1,
       bettingOpen: true,
     });
     await resetBets();
-    await giveCoinsToAll(10); // 매 라운드 10코인 지급
+    if (currentRound >= 1) {
+      await giveCoinsToAll(10); // 2라운드부터 기본 10코인 추가 지급
+    }
     setFlipLog([]);
     setCoinResult(null);
   };
