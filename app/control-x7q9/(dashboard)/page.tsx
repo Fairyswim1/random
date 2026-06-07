@@ -1,7 +1,7 @@
 "use client";
 import dynamic from "next/dynamic";
 
-const TeacherClient = dynamic(() => import("./TeacherClient"), {
+const TeacherClient = dynamic(() => import("../TeacherClient"), {
   ssr: false,
   loading: () => (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 to-purple-50 flex items-center justify-center">

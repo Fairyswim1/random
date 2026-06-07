@@ -19,7 +19,8 @@ export default function TeacherLoginForm() {
       const res = await fetch("/api/teacher-auth", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ password }),
+        credentials: "same-origin",
+        body: JSON.stringify({ password: password.trim() }),
       });
 
       if (!res.ok) {
@@ -29,7 +30,11 @@ export default function TeacherLoginForm() {
       }
 
       const from = searchParams.get("from");
-      router.replace(from && from.startsWith("/control-x7q9") ? from : "/control-x7q9");
+      window.location.replace(
+        from && from.startsWith("/control-x7q9") && from !== "/control-x7q9/login"
+          ? from
+          : "/control-x7q9"
+      );
     } catch {
       setError("네트워크 오류가 발생했습니다.");
     } finally {

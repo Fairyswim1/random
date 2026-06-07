@@ -175,8 +175,8 @@ export default function TeacherPage() {
   };
 
   const handleLogout = async () => {
-    await fetch("/api/teacher-auth", { method: "DELETE" });
-    router.push("/control-x7q9/login");
+    await fetch("/api/teacher-auth", { method: "DELETE", credentials: "same-origin" });
+    window.location.href = "/control-x7q9/login";
   };
 
   const submittedCount = Object.values(groups).filter((g) => g.submitted).length;

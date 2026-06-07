@@ -18,16 +18,16 @@ export function getTeacherAuthCookieMaxAge() {
 }
 
 export async function getTeacherAuthToken(): Promise<string | null> {
-  const password = process.env.TEACHER_PASSWORD;
-  const secret = process.env.TEACHER_AUTH_SECRET ?? "change-me";
+  const password = process.env.TEACHER_PASSWORD?.trim();
+  const secret = (process.env.TEACHER_AUTH_SECRET ?? "change-me").trim();
   if (!password) return null;
   return sha256Hex(`${password}:${secret}`);
 }
 
 export async function verifyTeacherPassword(password: string): Promise<boolean> {
-  const expected = process.env.TEACHER_PASSWORD;
+  const expected = process.env.TEACHER_PASSWORD?.trim();
   if (!expected) return false;
-  return password === expected;
+  return password.trim() === expected;
 }
 
 export async function verifyTeacherAuthToken(token: string | undefined): Promise<boolean> {
