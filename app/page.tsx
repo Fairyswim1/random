@@ -15,8 +15,8 @@ export default function Home() {
         className="text-center mb-12"
       >
         <div className="text-7xl mb-4">🎲</div>
-        <h1 className="text-4xl font-bold text-indigo-800 mb-2">랜덤워크 베팅 게임</h1>
-        <p className="text-lg text-indigo-600">동전을 던져 랜덤워크를 체험해보세요!</p>
+        <h1 className="text-4xl font-bold text-indigo-800 mb-2">동전 던지기 예측 게임</h1>
+        <p className="text-lg text-indigo-600">동전을 던지고, 최종 위치를 맞혀 보세요!</p>
       </motion.div>
 
       <div className="flex flex-col sm:flex-row gap-6 w-full max-w-md">
@@ -55,7 +55,7 @@ export default function Home() {
         transition={{ delay: 0.6 }}
         className="mt-12 text-sm text-gray-500"
       >
-        확률과 통계 · 랜덤워크 체험 수업
+        확률과 통계 체험 수업
       </motion.p>
     </main>
   );

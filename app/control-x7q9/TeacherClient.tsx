@@ -328,7 +328,7 @@ export default function TeacherPage() {
         {/* ① 수직선 - 풀 너비 */}
         <div className="bg-white rounded-2xl shadow-md px-8 py-6">
           <div className="flex items-center justify-between mb-2">
-            <h2 className="text-lg font-bold text-gray-700">📍 수직선 (랜덤워크)</h2>
+            <h2 className="text-lg font-bold text-gray-700">📍 수직선</h2>
             <div className="flex items-center gap-3">
               {coinResult && (
                 <motion.div

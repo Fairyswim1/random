@@ -13,8 +13,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "랜덤워크 베팅 게임",
-  description: "동전 던지기 랜덤워크 체험 수업 - 확률과 통계",
+  title: "동전 던지기 예측 게임",
+  description: "동전 던지기 예측 체험 - 확률과 통계",
 };
 
 export default function RootLayout({
