@@ -5,6 +5,7 @@ export type GameStatus = "idle" | "betting" | "flipping" | "results" | "quiz" | 
 export const PADLET_ACTIVITY_URL =
   "https://padlet.com/lhj3534/padlet-gzep97hk2pixyu1t";
 export const REQUIRED_BET_PER_ROUND = 10;
+export const MAX_NUM_FLIPS = 1000;
 export type QuizQuestionType = "ox" | "short";
 
 export interface QuizQuestion {
@@ -73,8 +74,7 @@ export const quizQuestions: QuizQuestion[] = [
     id: "short-1",
     type: "short",
     prompt:
-      "시행 횟수가 N배 커지면 실제 위치한 장소의 분포가 몇 배로 넓어질까?",
-    answer: "√N배",
+      "시행 횟수가 N배 커지면 실제 위치한 장소의 분포가 얼마나 더 넓게 퍼질까?",
   },
 ];
 

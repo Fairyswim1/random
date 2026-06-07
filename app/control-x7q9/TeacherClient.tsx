@@ -23,6 +23,7 @@ import {
   defaultGameState,
   quizQuestions,
   PADLET_ACTIVITY_URL,
+  MAX_NUM_FLIPS,
 } from "@/lib/gameStore";
 import { useRouter } from "next/navigation";
 
@@ -189,10 +190,10 @@ export default function TeacherPage() {
     answer: quizAnswers[groupId]?.[currentQuiz.id],
   }));
   const quizSubmittedCount = currentQuizAnswers.filter((item) => item.answer?.answer).length;
-  const hideAnswersUntilReveal = currentQuizIndex >= 1;
   const quizRevealed = gameState.quizRevealed ?? false;
-  const answersVisible = !hideAnswersUntilReveal || quizRevealed;
+  const hasGradedAnswer = !!currentQuiz.answer;
   const allQuizSubmitted = totalGroups > 0 && quizSubmittedCount >= totalGroups;
+  const answersVisible = hasGradedAnswer ? quizRevealed : allQuizSubmitted;
 
   return (
     <main className="min-h-screen bg-gradient-to-br from-indigo-50 to-purple-50">
@@ -249,7 +250,7 @@ export default function TeacherPage() {
               <span className="rounded-full bg-purple-100 px-3 py-1 text-sm font-semibold text-purple-700">
                 {currentQuiz.type === "ox" ? "OX 퀴즈" : "주관식"}
               </span>
-              {currentQuiz.answer && (
+              {hasGradedAnswer && currentQuiz.answer && (
                 <span className="rounded-full bg-green-100 px-3 py-1 text-sm font-semibold text-green-700">
                   정답: {currentQuiz.answer}
                 </span>
@@ -260,7 +261,7 @@ export default function TeacherPage() {
             </div>
             <div className="mt-6 flex flex-wrap gap-2">
               <button onClick={handlePrevQuiz} disabled={currentQuizIndex === 0} className="rounded-xl bg-gray-100 px-4 py-2 text-sm font-semibold text-gray-600 disabled:opacity-40">이전 문제</button>
-              {hideAnswersUntilReveal && !quizRevealed && (
+              {hasGradedAnswer && !quizRevealed && (
                 <button
                   onClick={handleRevealAnswers}
                   disabled={!allQuizSubmitted}
@@ -285,7 +286,10 @@ export default function TeacherPage() {
                 <div className="rounded-xl bg-gray-50 p-6 text-center text-gray-500">아직 입장한 모둠이 없습니다.</div>
               ) : (
                 currentQuizAnswers.map(({ groupId, group, answer }) => {
-                  const isCorrect = currentQuiz.answer ? answer?.answer === currentQuiz.answer : null;
+                  const isCorrect =
+                    hasGradedAnswer && currentQuiz.answer
+                      ? answer?.answer === currentQuiz.answer
+                      : null;
                   return (
                     <div key={groupId} className="rounded-xl border border-gray-100 bg-gray-50 p-4">
                       <div className="mb-2 flex items-center justify-between">
@@ -298,7 +302,9 @@ export default function TeacherPage() {
                         {answersVisible
                           ? (answer?.answer ?? "아직 답안이 없습니다.")
                           : answer
-                            ? "제출 완료 (답안 숨김)"
+                            ? hasGradedAnswer
+                              ? "제출 완료 (답안 숨김)"
+                              : "제출 완료 (전원 제출 후 공개)"
                             : "아직 답안이 없습니다."}
                       </div>
                       {isCorrect !== null && answer && answersVisible && (
@@ -376,10 +382,10 @@ export default function TeacherPage() {
                 <input
                   type="number"
                   min={1}
-                  max={100}
+                  max={MAX_NUM_FLIPS}
                   value={numFlips}
                   onChange={(e) => {
-                    const v = Math.max(1, Math.min(100, Number(e.target.value) || 1));
+                    const v = Math.max(1, Math.min(MAX_NUM_FLIPS, Number(e.target.value) || 1));
                     setNumFlips(v);
                   }}
                   className="w-24 border-2 border-indigo-300 rounded-xl px-3 py-2 text-xl font-bold text-indigo-700 text-center focus:outline-none focus:border-indigo-500"
