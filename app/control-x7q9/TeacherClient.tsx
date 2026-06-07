@@ -174,6 +174,11 @@ export default function TeacherPage() {
     window.location.href = PADLET_ACTIVITY_URL;
   };
 
+  const handleLogout = async () => {
+    await fetch("/api/teacher-auth", { method: "DELETE" });
+    router.push("/control-x7q9/login");
+  };
+
   const submittedCount = Object.values(groups).filter((g) => g.submitted).length;
   const totalGroups = Object.values(groups).length;
   const currentQuizIndex = Math.min(gameState.quizIndex ?? 0, quizQuestions.length - 1);
@@ -201,6 +206,12 @@ export default function TeacherPage() {
           <span className="bg-indigo-500 px-3 py-0.5 rounded-full text-sm">라운드 {gameState.round}</span>
         </div>
         <div className="flex items-center gap-2 text-sm">
+          <button
+            onClick={handleLogout}
+            className="rounded-lg px-2 py-1 text-indigo-200 transition hover:bg-indigo-600 hover:text-white"
+          >
+            로그아웃
+          </button>
           <span className={`px-3 py-1 rounded-full font-semibold ${
             gameState.status === "idle" ? "bg-gray-400" :
             gameState.status === "betting" ? "bg-yellow-400 text-yellow-900" :
