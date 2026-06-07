@@ -146,16 +146,24 @@ export default function TeacherPage() {
 
   const handleStartQuiz = async () => {
     await resetQuizAnswers();
-    await updateGameState({ status: "quiz", quizIndex: 0, quizOpen: true });
+    await updateGameState({ status: "quiz", quizIndex: 0, quizOpen: true, quizRevealed: false });
   };
 
   const handlePrevQuiz = async () => {
-    await updateGameState({ quizIndex: Math.max(0, (gameState.quizIndex ?? 0) - 1), quizOpen: true });
+    await updateGameState({
+      quizIndex: Math.max(0, (gameState.quizIndex ?? 0) - 1),
+      quizOpen: true,
+      quizRevealed: false,
+    });
   };
 
   const handleNextQuiz = async () => {
     const nextIndex = Math.min(quizQuestions.length - 1, (gameState.quizIndex ?? 0) + 1);
-    await updateGameState({ quizIndex: nextIndex, quizOpen: true });
+    await updateGameState({ quizIndex: nextIndex, quizOpen: true, quizRevealed: false });
+  };
+
+  const handleRevealAnswers = async () => {
+    await updateGameState({ quizRevealed: true });
   };
 
   const handleGoToPadlet = async () => {
@@ -173,6 +181,10 @@ export default function TeacherPage() {
     answer: quizAnswers[groupId]?.[currentQuiz.id],
   }));
   const quizSubmittedCount = currentQuizAnswers.filter((item) => item.answer?.answer).length;
+  const hideAnswersUntilReveal = currentQuizIndex >= 1;
+  const quizRevealed = gameState.quizRevealed ?? false;
+  const answersVisible = !hideAnswersUntilReveal || quizRevealed;
+  const allQuizSubmitted = totalGroups > 0 && quizSubmittedCount >= totalGroups;
 
   return (
     <main className="min-h-screen bg-gradient-to-br from-indigo-50 to-purple-50">
@@ -243,6 +255,15 @@ export default function TeacherPage() {
             </div>
             <div className="mt-6 flex flex-wrap gap-2">
               <button onClick={handlePrevQuiz} disabled={currentQuizIndex === 0} className="rounded-xl bg-gray-100 px-4 py-2 text-sm font-semibold text-gray-600 disabled:opacity-40">이전 문제</button>
+              {hideAnswersUntilReveal && !quizRevealed && (
+                <button
+                  onClick={handleRevealAnswers}
+                  disabled={!allQuizSubmitted}
+                  className="rounded-xl bg-green-600 px-4 py-2 text-sm font-semibold text-white shadow-md transition hover:bg-green-700 disabled:opacity-40"
+                >
+                  정답 공개 {allQuizSubmitted ? "" : `(${quizSubmittedCount}/${totalGroups})`}
+                </button>
+              )}
               <button onClick={handleNextQuiz} disabled={currentQuizIndex === quizQuestions.length - 1} className="rounded-xl bg-purple-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-40">다음 문제</button>
               <button
                 onClick={handleGoToPadlet}
@@ -268,8 +289,14 @@ export default function TeacherPage() {
                           {answer ? "제출 완료" : "미제출"}
                         </span>
                       </div>
-                      <div className="text-gray-700">{answer?.answer ?? "아직 답안이 없습니다."}</div>
-                      {isCorrect !== null && answer && (
+                      <div className="text-gray-700">
+                        {answersVisible
+                          ? (answer?.answer ?? "아직 답안이 없습니다.")
+                          : answer
+                            ? "제출 완료 (답안 숨김)"
+                            : "아직 답안이 없습니다."}
+                      </div>
+                      {isCorrect !== null && answer && answersVisible && (
                         <div className={`mt-2 text-sm font-semibold ${isCorrect ? "text-green-600" : "text-red-500"}`}>
                           {isCorrect ? "정답" : "오답"}
                         </div>

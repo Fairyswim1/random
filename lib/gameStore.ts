@@ -23,6 +23,7 @@ export interface GameState {
   bettingOpen: boolean;
   quizIndex: number;
   quizOpen: boolean;
+  quizRevealed: boolean;
 }
 
 export interface GroupBet {
@@ -86,6 +87,7 @@ export const defaultGameState: GameState = {
   bettingOpen: false,
   quizIndex: 0,
   quizOpen: false,
+  quizRevealed: false,
 };
 
 export function subscribeGameState(cb: (state: GameState) => void): () => void {
