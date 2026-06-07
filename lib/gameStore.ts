@@ -4,6 +4,7 @@ export type GameStatus = "idle" | "betting" | "flipping" | "results" | "quiz" | 
 
 export const PADLET_ACTIVITY_URL =
   "https://padlet.com/lhj3534/padlet-gzep97hk2pixyu1t";
+export const REQUIRED_BET_PER_ROUND = 10;
 export type QuizQuestionType = "ox" | "short";
 
 export interface QuizQuestion {
@@ -190,6 +191,9 @@ export async function submitBet(groupId: string, bets: GroupBet) {
   const totalBet = Object.values(bets).reduce((a, b) => a + b, 0);
   const snap = await get(ref(db, `${GROUPS_REF}/${groupId}`));
   const group: Group = snap.val();
+  if (totalBet < REQUIRED_BET_PER_ROUND) {
+    throw new Error(`기본 ${REQUIRED_BET_PER_ROUND}코인을 배팅해야 합니다`);
+  }
   if (totalBet > group.coins) throw new Error("코인이 부족합니다");
   await update(ref(db, `${GROUPS_REF}/${groupId}`), {
     bets,

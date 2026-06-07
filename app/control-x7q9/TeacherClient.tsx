@@ -206,6 +206,14 @@ export default function TeacherPage() {
           <span className="bg-indigo-500 px-3 py-0.5 rounded-full text-sm">라운드 {gameState.round}</span>
         </div>
         <div className="flex items-center gap-2 text-sm">
+          {gameState.status === "results" && gameState.result !== null && (
+            <button
+              onClick={handleStartQuiz}
+              className="rounded-xl bg-white px-4 py-2 font-bold text-purple-700 shadow-md transition hover:bg-purple-50"
+            >
+              다음 → 퀴즈 시작
+            </button>
+          )}
           <button
             onClick={handleLogout}
             className="rounded-lg px-2 py-1 text-indigo-200 transition hover:bg-indigo-600 hover:text-white"
@@ -229,23 +237,6 @@ export default function TeacherPage() {
           </span>
         </div>
       </div>
-
-      {gameState.status === "results" && gameState.result !== null && (
-        <div className="sticky top-0 z-20 border-b border-purple-300 bg-purple-600 px-4 py-4 shadow-lg">
-          <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-3 sm:flex-row">
-            <div className="text-center text-white sm:text-left">
-              <div className="text-sm font-semibold text-purple-100">게임 결과 확인</div>
-              <div className="text-lg font-bold">최종 위치 {gameState.result}번 · 퀴즈로 이동하세요</div>
-            </div>
-            <button
-              onClick={handleStartQuiz}
-              className="w-full shrink-0 rounded-xl bg-white px-8 py-4 text-lg font-bold text-purple-700 shadow-md transition hover:bg-purple-50 sm:w-auto"
-            >
-              다음 → 퀴즈 시작
-            </button>
-          </div>
-        </div>
-      )}
 
       {gameState.status === "quiz" && gameState.quizOpen ? (
         <div className="max-w-5xl mx-auto px-4 py-6 space-y-5">
@@ -368,12 +359,6 @@ export default function TeacherPage() {
                   </div>
                 </div>
               </div>
-              <button
-                onClick={handleStartQuiz}
-                className="w-full shrink-0 rounded-xl bg-white px-8 py-4 text-lg font-bold text-orange-600 shadow-md transition hover:bg-orange-50 sm:w-auto"
-              >
-                다음 → 퀴즈 시작
-              </button>
             </div>
           </div>
         )}
@@ -421,14 +406,6 @@ export default function TeacherPage() {
             )}
 
             <div className="space-y-2">
-              {gameState.status === "results" && (
-                <button
-                  onClick={handleStartQuiz}
-                  className="w-full rounded-xl bg-purple-600 py-4 text-lg font-bold text-white shadow-lg transition hover:bg-purple-700"
-                >
-                  다음 → 퀴즈 시작
-                </button>
-              )}
               {(gameState.status === "idle" || gameState.status === "results") && (
                 <button onClick={handleNewRound} className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-xl transition shadow">
                   🎲 새 라운드 시작

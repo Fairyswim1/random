@@ -17,6 +17,7 @@ import {
   defaultGameState,
   quizQuestions,
   PADLET_ACTIVITY_URL,
+  REQUIRED_BET_PER_ROUND,
 } from "@/lib/gameStore";
 import { useRouter } from "next/navigation";
 
@@ -124,7 +125,8 @@ export default function StudentPage() {
 
   const totalBet = Object.values(bets).reduce((a, b) => a + b, 0);
   const availableCoins = (myGroup?.coins ?? 10) - totalBet;
-  const allCoinsUsed = availableCoins === 0 && totalBet > 0;
+  const canSubmitBet =
+    totalBet >= REQUIRED_BET_PER_ROUND && totalBet <= (myGroup?.coins ?? 10);
 
   const handleBetChange = (pos: number, value: number) => {
     const current = bets[pos.toString()] ?? 0;
@@ -137,12 +139,12 @@ export default function StudentPage() {
   const myCoins = myGroup?.coins ?? 10;
 
   const handleSubmit = async () => {
-    if (totalBet === 0) {
-      setBetError("코인을 배팅하세요");
+    if (totalBet < REQUIRED_BET_PER_ROUND) {
+      setBetError(`기본 ${REQUIRED_BET_PER_ROUND}코인을 배팅해야 합니다`);
       return;
     }
-    if (totalBet < myCoins) {
-      setBetError(`코인 ${myCoins}개를 전부 사용해야 합니다! (${myCoins - totalBet}개 남음)`);
+    if (totalBet > myCoins) {
+      setBetError("보유 코인보다 많이 배팅할 수 없습니다");
       return;
     }
     setSubmitting(true);
@@ -378,7 +380,7 @@ export default function StudentPage() {
                 {gameState.numFlips}번 던진 후 캐릭터가 어느 위치에 있을지 예측하세요!
               </p>
               <p className="text-xs text-orange-500 font-semibold mb-4">
-                ⚠️ 코인 {myCoins}개를 전부 사용해야 제출할 수 있어요!
+                ⚠️ 기본 {REQUIRED_BET_PER_ROUND}코인을 배팅해야 제출할 수 있어요! (나머지는 남겨도 됩니다)
               </p>
 
               <div className="grid grid-cols-7 gap-1.5 mb-5">
@@ -437,11 +439,17 @@ export default function StudentPage() {
 
               <button
                 onClick={handleSubmit}
-                disabled={submitting || !allCoinsUsed}
+                disabled={submitting || !canSubmitBet}
                 className={`w-full font-bold py-3 rounded-xl transition shadow text-white
-                  ${allCoinsUsed ? "bg-pink-500 hover:bg-pink-600" : "bg-gray-300 cursor-not-allowed"}`}
+                  ${canSubmitBet ? "bg-pink-500 hover:bg-pink-600" : "bg-gray-300 cursor-not-allowed"}`}
               >
-                {submitting ? "제출 중..." : allCoinsUsed ? "베팅 확정! 🎯" : `${availableCoins}코인 더 배팅하세요`}
+                {submitting
+                  ? "제출 중..."
+                  : canSubmitBet
+                    ? "베팅 확정! 🎯"
+                    : totalBet < REQUIRED_BET_PER_ROUND
+                      ? `${REQUIRED_BET_PER_ROUND - totalBet}코인 더 배팅하세요`
+                      : "배팅 금액을 확인하세요"}
               </button>
             </motion.div>
           )}
