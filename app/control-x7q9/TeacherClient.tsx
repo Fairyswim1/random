@@ -239,6 +239,12 @@ export default function TeacherPage() {
             </button>
           )}
           <button
+            onClick={() => router.push("/control-x7q9/mirror")}
+            className="rounded-xl bg-teal-500 px-4 py-2 font-bold text-white shadow-md transition hover:bg-teal-400"
+          >
+            모둠 화면
+          </button>
+          <button
             onClick={handleLogout}
             className="rounded-lg px-2 py-1 text-indigo-200 transition hover:bg-indigo-600 hover:text-white"
           >

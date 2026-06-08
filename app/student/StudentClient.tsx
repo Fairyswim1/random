@@ -234,6 +234,18 @@ export default function StudentPage() {
           <span className="bg-pink-500 px-3 py-0.5 rounded-full text-sm">라운드 {gameState.round}</span>
         </div>
         <div className="flex items-center gap-2">
+          <button
+            onClick={() => router.push("/student/watch")}
+            className="rounded-lg bg-pink-500 px-3 py-1 text-sm font-semibold hover:bg-pink-400"
+          >
+            모둠 화면 보기
+          </button>
+          <button
+            onClick={() => router.push("/student/share")}
+            className="rounded-lg bg-teal-500 px-3 py-1 text-sm font-semibold hover:bg-teal-400"
+          >
+            화면 공유
+          </button>
           <span className="text-yellow-300">🪙</span>
           <span className="font-bold text-xl">{myGroup?.coins ?? 10}</span>
         </div>
