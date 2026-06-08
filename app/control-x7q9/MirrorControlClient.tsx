@@ -147,8 +147,11 @@ export default function MirrorControlClient() {
               <code>/student/watch</code>
             </li>
             <li>
-              <span className="font-semibold text-gray-800">모둠 태블릿 공유:</span>{" "}
+              <span className="font-semibold text-gray-800">모둠 화면 공유 (PC·Chromebook):</span>{" "}
               <code>/student/share</code>
+            </li>
+            <li className="text-amber-700">
+              iPhone·Android 태블릿은 화면 공유 불가 → 시청만 <code>/student/watch</code>
             </li>
             <li>
               <span className="font-semibold text-gray-800">교사 제어:</span>{" "}

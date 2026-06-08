@@ -105,8 +105,17 @@ export function useMirrorBroadcaster(groupId: string | null, isActive: boolean) 
     } catch (error) {
       const reason =
         error instanceof Error &&
-        ["unsupported", "insecure", "denied", "cancelled", "unknown"].includes(error.message)
-          ? (error.message as "unsupported" | "insecure" | "denied" | "cancelled" | "unknown")
+        ["ios", "android", "unsupported", "insecure", "denied", "cancelled", "unknown"].includes(
+          error.message
+        )
+          ? (error.message as
+              | "ios"
+              | "android"
+              | "unsupported"
+              | "insecure"
+              | "denied"
+              | "cancelled"
+              | "unknown")
           : "unknown";
       setError(getScreenShareErrorMessage(reason));
     }

@@ -1,4 +1,6 @@
 export type ScreenShareFailure =
+  | "ios"
+  | "android"
   | "unsupported"
   | "insecure"
   | "denied"
@@ -7,8 +9,12 @@ export type ScreenShareFailure =
 
 export function getScreenShareErrorMessage(reason: ScreenShareFailure): string {
   switch (reason) {
+    case "ios":
+      return "iPhone·iPad는 웹 브라우저에서 화면 공유가 불가능합니다.";
+    case "android":
+      return "Android 태블릿·폰의 Chrome에서도 웹 화면 공유는 지원되지 않습니다. 모둠 대표는 Windows PC, Mac, Chromebook을 사용해 주세요.";
     case "unsupported":
-      return "이 브라우저는 화면 공유를 지원하지 않습니다. Chrome 또는 Edge를 사용해 주세요.";
+      return "이 환경에서는 화면 공유가 지원되지 않습니다. Windows PC, Mac, Chromebook의 Chrome 또는 Edge를 사용해 주세요.";
     case "insecure":
       return "화면 공유는 HTTPS 또는 localhost에서만 가능합니다. 배포된 사이트(https://...) 주소로 접속하거나, PC에서는 http://localhost:3000 을 사용해 주세요. Wi-Fi IP 주소(http://192.168...)로는 공유가 안 됩니다.";
     case "denied":
@@ -36,6 +42,14 @@ function classifyDisplayMediaError(error: unknown): ScreenShareFailure {
 }
 
 export async function requestScreenShareStream(): Promise<MediaStream> {
+  const { isIosDevice, isAndroidDevice } = await import("./deviceSupport");
+  if (isIosDevice()) {
+    throw new Error("ios");
+  }
+  if (isAndroidDevice()) {
+    throw new Error("android");
+  }
+
   if (typeof navigator === "undefined" || !navigator.mediaDevices?.getDisplayMedia) {
     throw new Error("unsupported");
   }

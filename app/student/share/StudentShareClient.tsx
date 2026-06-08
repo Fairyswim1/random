@@ -6,6 +6,7 @@ import { motion } from "framer-motion";
 import { subscribeMirrorControl, MirrorControl, defaultMirrorControl } from "@/lib/mirrorStore";
 import { useMirrorBroadcaster } from "@/lib/useMirrorBroadcaster";
 import { useStudentGroup } from "@/lib/useStudentGroup";
+import { canShareScreenInBrowser, getShareDeviceHint } from "@/lib/deviceSupport";
 
 export default function StudentShareClient() {
   const router = useRouter();
@@ -13,6 +14,8 @@ export default function StudentShareClient() {
   const [control, setControl] = useState<MirrorControl>(defaultMirrorControl);
 
   const isActive = joined && control.activeGroupId === groupId;
+  const canShare = canShareScreenInBrowser();
+  const deviceHint = getShareDeviceHint();
   const { sharing, error, startSharing, stopSharing } = useMirrorBroadcaster(
     joined ? groupId : null,
     isActive
@@ -88,10 +91,17 @@ export default function StudentShareClient() {
             )}
           </div>
 
+          {deviceHint && (
+            <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+              {deviceHint}
+            </div>
+          )}
+
           {!sharing ? (
             <button
               onClick={() => void startSharing()}
-              className="w-full rounded-2xl bg-teal-500 py-4 text-lg font-bold text-white shadow-lg hover:bg-teal-400"
+              disabled={!canShare}
+              className="w-full rounded-2xl bg-teal-500 py-4 text-lg font-bold text-white shadow-lg hover:bg-teal-400 disabled:cursor-not-allowed disabled:opacity-40"
             >
               화면 공유 시작
             </button>
@@ -119,9 +129,9 @@ export default function StudentShareClient() {
             <div className="rounded-xl bg-red-50 p-4 text-sm text-red-700">
               <div className="font-semibold">{error}</div>
               <ul className="mt-3 list-disc space-y-1 pl-4 text-red-600">
-                <li>Chrome 또는 Edge 사용</li>
-                <li>팝업에서 공유할 화면/탭 선택 후 「공유」 클릭</li>
-                <li>주소가 <code className="rounded bg-red-100 px-1">https://</code> 또는 <code className="rounded bg-red-100 px-1">localhost</code> 인지 확인</li>
+                <li>화면 공유는 <strong>Windows PC, Mac, Chromebook</strong>만 가능</li>
+                <li>iPhone·Android 태블릿/폰은 <strong>/student/watch</strong>로 보기만 가능</li>
+                <li>PC에서는 Chrome/Edge + 팝업에서 화면 선택 후 「공유」</li>
               </ul>
             </div>
           )}
