@@ -1,6 +1,15 @@
 export const ICE_SERVERS: RTCIceServer[] = [
   { urls: "stun:stun.l.google.com:19302" },
   { urls: "stun:stun1.l.google.com:19302" },
+  {
+    urls: [
+      "turn:openrelay.metered.ca:80",
+      "turn:openrelay.metered.ca:443",
+      "turns:openrelay.metered.ca:443?transport=tcp",
+    ],
+    username: "openrelayproject",
+    credential: "openrelayproject",
+  },
 ];
 
 export function createPeerConnection(): RTCPeerConnection {
@@ -18,6 +27,7 @@ export async function pushIceCandidate(
   await set(ref(db, `${path}/${key}`), candidate.toJSON());
 }
 
+/** Listen for all ICE candidates (including ones already in Firebase before subscribe). */
 export function listenIceCandidates(
   db: import("firebase/database").Database,
   path: string,
@@ -28,17 +38,19 @@ export function listenIceCandidates(
   let cancelled = false;
 
   (async () => {
-    const { ref, onChildAdded } = await import("firebase/database");
+    const { ref, onValue } = await import("firebase/database");
     if (cancelled) return;
-    unsubscribe = onChildAdded(ref(db, path), async (snap) => {
-      if (processed.has(snap.key!)) return;
-      processed.add(snap.key!);
-      const data = snap.val() as RTCIceCandidateInit;
-      if (!data?.candidate) return;
-      try {
-        await pc.addIceCandidate(data);
-      } catch {
-        // ICE can arrive after connection is established
+    unsubscribe = onValue(ref(db, path), async (snap) => {
+      const val = snap.val() as Record<string, RTCIceCandidateInit> | null;
+      if (!val) return;
+      for (const [key, data] of Object.entries(val)) {
+        if (processed.has(key) || !data?.candidate) continue;
+        processed.add(key);
+        try {
+          await pc.addIceCandidate(data);
+        } catch {
+          // ICE can arrive after connection is established
+        }
       }
     });
   })();
@@ -47,4 +59,15 @@ export function listenIceCandidates(
     cancelled = true;
     unsubscribe?.();
   };
+}
+
+export async function clearSignalingIce(
+  db: import("firebase/database").Database,
+  basePath: string
+) {
+  const { ref, remove } = await import("firebase/database");
+  await Promise.all([
+    remove(ref(db, `${basePath}/viewerIce`)),
+    remove(ref(db, `${basePath}/broadcasterIce`)),
+  ]);
 }

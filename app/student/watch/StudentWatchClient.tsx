@@ -33,9 +33,12 @@ export default function StudentWatchClient() {
   }, [control.activeGroupId]);
 
   useEffect(() => {
-    if (videoRef.current && stream) {
-      videoRef.current.srcObject = stream;
-    }
+    const video = videoRef.current;
+    if (!video || !stream) return;
+    video.srcObject = stream;
+    void video.play().catch(() => {
+      // autoplay may need user gesture on some mobile browsers
+    });
   }, [stream]);
 
   if (sessionLoaded && groupsLoaded && !joined) {
@@ -112,8 +115,13 @@ export default function StudentWatchClient() {
                 ? "선생님이 모둠을 선택하면 화면이 나타납니다"
                 : broadcasterOnline
                   ? `${groupLabel} 화면에 연결 중...`
-                  : `${groupLabel} 태블릿에서 화면 공유를 시작해 주세요`}
+                  : `${groupLabel} PC에서 화면 공유를 시작해 주세요`}
             </h1>
+            {control.activeGroupId && broadcasterOnline && status === "waiting" && (
+              <p className="mt-3 text-sm text-white/60">
+                연결이 안 되면 잠시 기다리거나 페이지를 새로고침해 주세요.
+              </p>
+            )}
           </motion.div>
         )}
       </div>

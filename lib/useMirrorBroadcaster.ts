@@ -3,7 +3,12 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { getDb } from "./firebase";
 import { setBroadcasterOnline, signalingRef } from "./mirrorStore";
-import { createPeerConnection, listenIceCandidates, pushIceCandidate } from "./mirrorRtc";
+import {
+  clearSignalingIce,
+  createPeerConnection,
+  listenIceCandidates,
+  pushIceCandidate,
+} from "./mirrorRtc";
 import { getScreenShareErrorMessage, requestScreenShareStream } from "./screenShare";
 
 type ViewerSession = {
@@ -11,30 +16,34 @@ type ViewerSession = {
   answer?: RTCSessionDescriptionInit;
 };
 
+function isPeerLive(pc: RTCPeerConnection | undefined): boolean {
+  return !!pc && pc.connectionState !== "failed" && pc.connectionState !== "closed";
+}
+
 export function useMirrorBroadcaster(groupId: string | null, isActive: boolean) {
   const [sharing, setSharing] = useState(false);
   const [error, setError] = useState("");
   const streamRef = useRef<MediaStream | null>(null);
   const peersRef = useRef<Map<string, RTCPeerConnection>>(new Map());
-  const processedOffersRef = useRef<Set<string>>(new Set());
+  const connectingRef = useRef<Set<string>>(new Set());
   const iceCleanupsRef = useRef<Map<string, () => void>>(new Map());
 
-  const closePeer = useCallback((viewerId: string) => {
+  const closePeer = useCallback(async (viewerId: string) => {
     iceCleanupsRef.current.get(viewerId)?.();
     iceCleanupsRef.current.delete(viewerId);
     peersRef.current.get(viewerId)?.close();
     peersRef.current.delete(viewerId);
-    processedOffersRef.current.delete(viewerId);
+    connectingRef.current.delete(viewerId);
   }, []);
 
-  const closeAllPeers = useCallback(() => {
+  const closeAllPeers = useCallback(async () => {
     for (const viewerId of [...peersRef.current.keys()]) {
-      closePeer(viewerId);
+      await closePeer(viewerId);
     }
   }, [closePeer]);
 
   const stopSharing = useCallback(async () => {
-    closeAllPeers();
+    await closeAllPeers();
     streamRef.current?.getTracks().forEach((t) => t.stop());
     streamRef.current = null;
     if (groupId) {
@@ -45,44 +54,59 @@ export function useMirrorBroadcaster(groupId: string | null, isActive: boolean) 
 
   const connectViewer = useCallback(
     async (viewerId: string, offer: RTCSessionDescriptionInit) => {
-      if (!groupId || !streamRef.current || peersRef.current.has(viewerId)) return;
+      if (!groupId || !streamRef.current || connectingRef.current.has(viewerId)) return;
 
-      const pc = createPeerConnection();
-      peersRef.current.set(viewerId, pc);
+      const existing = peersRef.current.get(viewerId);
+      if (isPeerLive(existing)) return;
 
-      streamRef.current.getTracks().forEach((track) => {
-        pc.addTrack(track, streamRef.current!);
-      });
+      if (existing) {
+        await closePeer(viewerId);
+      }
 
-      const db = await getDb();
-      const basePath = signalingRef(groupId, viewerId);
-      const processedIce = new Set<string>();
+      connectingRef.current.add(viewerId);
 
-      pc.onicecandidate = (event) => {
-        if (event.candidate) {
-          void pushIceCandidate(db, `${basePath}/broadcasterIce`, event.candidate);
-        }
-      };
+      try {
+        const db = await getDb();
+        const basePath = signalingRef(groupId, viewerId);
+        await clearSignalingIce(db, basePath);
 
-      pc.onconnectionstatechange = () => {
-        if (pc.connectionState === "failed" || pc.connectionState === "closed") {
-          closePeer(viewerId);
-        }
-      };
+        const pc = createPeerConnection();
+        peersRef.current.set(viewerId, pc);
 
-      iceCleanupsRef.current.set(
-        viewerId,
-        listenIceCandidates(db, `${basePath}/viewerIce`, pc, processedIce)
-      );
+        streamRef.current.getTracks().forEach((track) => {
+          pc.addTrack(track, streamRef.current!);
+        });
 
-      await pc.setRemoteDescription(offer);
-      const answer = await pc.createAnswer();
-      await pc.setLocalDescription(answer);
+        const processedIce = new Set<string>();
 
-      const { ref, update } = await import("firebase/database");
-      await update(ref(db, basePath), {
-        answer: { type: answer.type, sdp: answer.sdp },
-      });
+        pc.onicecandidate = (event) => {
+          if (event.candidate) {
+            void pushIceCandidate(db, `${basePath}/broadcasterIce`, event.candidate);
+          }
+        };
+
+        pc.onconnectionstatechange = () => {
+          if (pc.connectionState === "failed" || pc.connectionState === "closed") {
+            void closePeer(viewerId);
+          }
+        };
+
+        iceCleanupsRef.current.set(
+          viewerId,
+          listenIceCandidates(db, `${basePath}/viewerIce`, pc, processedIce)
+        );
+
+        await pc.setRemoteDescription(offer);
+        const answer = await pc.createAnswer();
+        await pc.setLocalDescription(answer);
+
+        const { ref, update } = await import("firebase/database");
+        await update(ref(db, basePath), {
+          answer: { type: answer.type, sdp: answer.sdp },
+        });
+      } finally {
+        connectingRef.current.delete(viewerId);
+      }
     },
     [groupId, closePeer]
   );
@@ -99,7 +123,6 @@ export function useMirrorBroadcaster(groupId: string | null, isActive: boolean) 
         void stopSharing();
       });
       streamRef.current = stream;
-      processedOffersRef.current.clear();
       await setBroadcasterOnline(groupId, true);
       setSharing(true);
     } catch (error) {
@@ -138,15 +161,17 @@ export function useMirrorBroadcaster(groupId: string | null, isActive: boolean) 
 
         for (const viewerId of peersRef.current.keys()) {
           if (!activeIds.has(viewerId)) {
-            closePeer(viewerId);
+            void closePeer(viewerId);
           }
         }
 
         for (const [viewerId, session] of Object.entries(viewers)) {
-          if (session.offer && !session.answer && !processedOffersRef.current.has(viewerId)) {
-            processedOffersRef.current.add(viewerId);
-            void connectViewer(viewerId, session.offer);
-          }
+          if (!session.offer) continue;
+          const pc = peersRef.current.get(viewerId);
+          if (isPeerLive(pc) || connectingRef.current.has(viewerId)) continue;
+          void connectViewer(viewerId, session.offer).catch(() => {
+            void closePeer(viewerId);
+          });
         }
       });
     })();
@@ -159,7 +184,7 @@ export function useMirrorBroadcaster(groupId: string | null, isActive: boolean) 
 
   useEffect(() => {
     if (!isActive && sharing) {
-      closeAllPeers();
+      void closeAllPeers();
     }
   }, [isActive, sharing, closeAllPeers]);
 
@@ -168,7 +193,7 @@ export function useMirrorBroadcaster(groupId: string | null, isActive: boolean) 
 
   useEffect(() => {
     return () => {
-      closeAllPeers();
+      void closeAllPeers();
       streamRef.current?.getTracks().forEach((t) => t.stop());
       streamRef.current = null;
       const id = groupIdRef.current;

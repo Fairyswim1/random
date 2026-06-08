@@ -1,9 +1,14 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { getDb } from "./firebase";
 import { signalingRef } from "./mirrorStore";
-import { createPeerConnection, listenIceCandidates, pushIceCandidate } from "./mirrorRtc";
+import {
+  clearSignalingIce,
+  createPeerConnection,
+  listenIceCandidates,
+  pushIceCandidate,
+} from "./mirrorRtc";
 
 function getViewerId(): string {
   const key = "mirrorViewerId";
@@ -20,6 +25,25 @@ export function useMirrorViewer(activeGroupId: string | null) {
   const [status, setStatus] = useState<"idle" | "connecting" | "connected" | "waiting">("idle");
   const pcRef = useRef<RTCPeerConnection | null>(null);
   const iceCleanupRef = useRef<(() => void) | null>(null);
+  const unsubAnswerRef = useRef<(() => void) | null>(null);
+  const retryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const connectRef = useRef<(() => void) | null>(null);
+
+  const teardown = useCallback(async (groupId: string, viewerId: string) => {
+    if (retryTimerRef.current) {
+      clearTimeout(retryTimerRef.current);
+      retryTimerRef.current = null;
+    }
+    iceCleanupRef.current?.();
+    iceCleanupRef.current = null;
+    unsubAnswerRef.current?.();
+    unsubAnswerRef.current = null;
+    pcRef.current?.close();
+    pcRef.current = null;
+    const db = await getDb();
+    const { ref, remove } = await import("firebase/database");
+    await remove(ref(db, signalingRef(groupId, viewerId)));
+  }, []);
 
   useEffect(() => {
     if (!activeGroupId) {
@@ -31,30 +55,26 @@ export function useMirrorViewer(activeGroupId: string | null) {
     let cancelled = false;
     const groupId = activeGroupId;
     const viewerId = getViewerId();
-    let unsubAnswer: (() => void) | null = null;
 
-    const teardown = async () => {
-      iceCleanupRef.current?.();
-      iceCleanupRef.current = null;
-      unsubAnswer?.();
-      unsubAnswer = null;
-      pcRef.current?.close();
-      pcRef.current = null;
-      const db = await getDb();
-      const { ref, remove } = await import("firebase/database");
-      await remove(ref(db, signalingRef(groupId, viewerId)));
+    const scheduleRetry = () => {
+      if (cancelled || retryTimerRef.current) return;
+      retryTimerRef.current = setTimeout(() => {
+        retryTimerRef.current = null;
+        if (!cancelled) connectRef.current?.();
+      }, 3000);
     };
 
     const connect = async () => {
       setStatus("connecting");
       setStream(null);
-      await teardown();
+      await teardown(groupId, viewerId);
 
       if (cancelled) return;
 
       const db = await getDb();
       const { ref, onValue, set } = await import("firebase/database");
       const basePath = signalingRef(groupId, viewerId);
+      await clearSignalingIce(db, basePath);
 
       const pc = createPeerConnection();
       pcRef.current = pc;
@@ -62,16 +82,24 @@ export function useMirrorViewer(activeGroupId: string | null) {
       pc.addTransceiver("video", { direction: "recvonly" });
 
       pc.ontrack = (event) => {
-        if (event.streams[0]) {
-          setStream(event.streams[0]);
-          setStatus("connected");
+        const mediaStream = event.streams[0] ?? new MediaStream([event.track]);
+        setStream(mediaStream);
+        setStatus("connected");
+        if (retryTimerRef.current) {
+          clearTimeout(retryTimerRef.current);
+          retryTimerRef.current = null;
         }
       };
 
       pc.onconnectionstatechange = () => {
-        if (pc.connectionState === "failed") {
+        if (pc.connectionState === "connected") {
+          setStatus("connected");
+          return;
+        }
+        if (pc.connectionState === "failed" || pc.connectionState === "disconnected") {
           setStatus("waiting");
           setStream(null);
+          scheduleRetry();
         }
       };
 
@@ -89,15 +117,9 @@ export function useMirrorViewer(activeGroupId: string | null) {
         }
       };
 
-      const offer = await pc.createOffer();
-      await pc.setLocalDescription(offer);
-      await set(ref(db, basePath), {
-        offer: { type: offer.type, sdp: offer.sdp },
-      });
-
-      unsubAnswer = onValue(ref(db, `${basePath}/answer`), async (snap) => {
+      unsubAnswerRef.current = onValue(ref(db, `${basePath}/answer`), async (snap) => {
         const answer = snap.val() as RTCSessionDescriptionInit | null;
-        if (!answer || pc.signalingState !== "have-local-offer") return;
+        if (!answer?.sdp || pc.signalingState !== "have-local-offer") return;
         try {
           await pc.setRemoteDescription(answer);
         } catch {
@@ -105,20 +127,37 @@ export function useMirrorViewer(activeGroupId: string | null) {
         }
       });
 
+      const offer = await pc.createOffer();
+      await pc.setLocalDescription(offer);
+      await set(ref(db, basePath), {
+        offer: { type: offer.type, sdp: offer.sdp },
+      });
+
       if (!cancelled) {
         setStatus("waiting");
+        retryTimerRef.current = setTimeout(() => {
+          retryTimerRef.current = null;
+          if (!cancelled && pcRef.current && pcRef.current.connectionState !== "connected") {
+            scheduleRetry();
+          }
+        }, 8000);
       }
+    };
+
+    connectRef.current = () => {
+      void connect();
     };
 
     void connect();
 
     return () => {
       cancelled = true;
-      void teardown();
+      connectRef.current = null;
+      void teardown(groupId, viewerId);
       setStatus("idle");
       setStream(null);
     };
-  }, [activeGroupId]);
+  }, [activeGroupId, teardown]);
 
   return { stream, status };
 }
