@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { getDb } from "./firebase";
 import { setBroadcasterOnline, signalingRef } from "./mirrorStore";
 import { createPeerConnection, listenIceCandidates, pushIceCandidate } from "./mirrorRtc";
+import { getScreenShareErrorMessage, requestScreenShareStream } from "./screenShare";
 
 type ViewerSession = {
   offer?: RTCSessionDescriptionInit;
@@ -93,10 +94,7 @@ export function useMirrorBroadcaster(groupId: string | null, isActive: boolean) 
     }
     setError("");
     try {
-      const stream = await navigator.mediaDevices.getDisplayMedia({
-        video: { frameRate: 15 },
-        audio: false,
-      });
+      const stream = await requestScreenShareStream();
       stream.getVideoTracks()[0]?.addEventListener("ended", () => {
         void stopSharing();
       });
@@ -104,8 +102,13 @@ export function useMirrorBroadcaster(groupId: string | null, isActive: boolean) 
       processedOffersRef.current.clear();
       await setBroadcasterOnline(groupId, true);
       setSharing(true);
-    } catch {
-      setError("화면 공유가 취소되었거나 허용되지 않았습니다");
+    } catch (error) {
+      const reason =
+        error instanceof Error &&
+        ["unsupported", "insecure", "denied", "cancelled", "unknown"].includes(error.message)
+          ? (error.message as "unsupported" | "insecure" | "denied" | "cancelled" | "unknown")
+          : "unknown";
+      setError(getScreenShareErrorMessage(reason));
     }
   }, [groupId, stopSharing]);
 
@@ -151,16 +154,20 @@ export function useMirrorBroadcaster(groupId: string | null, isActive: boolean) 
     }
   }, [isActive, sharing, closeAllPeers]);
 
+  const groupIdRef = useRef(groupId);
+  groupIdRef.current = groupId;
+
   useEffect(() => {
     return () => {
       closeAllPeers();
       streamRef.current?.getTracks().forEach((t) => t.stop());
       streamRef.current = null;
-      if (groupId) {
-        void setBroadcasterOnline(groupId, false);
+      const id = groupIdRef.current;
+      if (id) {
+        void setBroadcasterOnline(id, false);
       }
     };
-  }, [groupId, closeAllPeers]);
+  }, [closeAllPeers]);
 
   return { sharing, error, startSharing, stopSharing };
 }

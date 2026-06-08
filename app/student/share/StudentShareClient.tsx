@@ -116,8 +116,27 @@ export default function StudentShareClient() {
           )}
 
           {error && (
-            <div className="rounded-xl bg-red-50 p-3 text-sm text-red-600">{error}</div>
+            <div className="rounded-xl bg-red-50 p-4 text-sm text-red-700">
+              <div className="font-semibold">{error}</div>
+              <ul className="mt-3 list-disc space-y-1 pl-4 text-red-600">
+                <li>Chrome 또는 Edge 사용</li>
+                <li>팝업에서 공유할 화면/탭 선택 후 「공유」 클릭</li>
+                <li>주소가 <code className="rounded bg-red-100 px-1">https://</code> 또는 <code className="rounded bg-red-100 px-1">localhost</code> 인지 확인</li>
+              </ul>
+            </div>
           )}
+
+          <div className="rounded-xl bg-white p-4 text-xs text-gray-500 shadow-sm">
+            현재 접속:{" "}
+            <span className="font-mono text-gray-700">
+              {typeof window !== "undefined" ? window.location.origin : ""}
+            </span>
+            {typeof window !== "undefined" && !window.isSecureContext && (
+              <div className="mt-2 font-semibold text-amber-600">
+                이 주소는 화면 공유가 막혀 있을 수 있습니다. 배포된 HTTPS 주소로 접속해 주세요.
+              </div>
+            )}
+          </div>
         </motion.div>
       </div>
     </main>
