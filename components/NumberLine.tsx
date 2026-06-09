@@ -2,6 +2,7 @@
 
 import { motion } from "framer-motion";
 import { useEffect, useState } from "react";
+import { POSITION_MIN, POSITION_MAX } from "@/lib/gameStore";
 
 interface NumberLineProps {
   position: number;
@@ -38,9 +39,9 @@ export default function NumberLine({
     }
   }, [lastMove, position, transitionDuration]);
 
-  const MIN = -10;
-  const MAX = 10;
-  const TOTAL = MAX - MIN + 1; // 21
+  const MIN = POSITION_MIN;
+  const MAX = POSITION_MAX;
+  const TOTAL = MAX - MIN + 1;
 
   return (
     <div className="w-full px-2">
@@ -113,7 +114,7 @@ export default function NumberLine({
                     ? "w-2.5 h-12 bg-indigo-600"
                     : isCurrent
                     ? "w-2 h-10 bg-yellow-500"
-                    : Math.abs(val) === 10
+                    : Math.abs(val) === MAX
                     ? "w-2 h-10 bg-red-400"
                     : "w-1.5 h-7 bg-gray-500"}
                 `}
@@ -126,7 +127,7 @@ export default function NumberLine({
                     ? "text-xl text-indigo-700"
                     : isCurrent
                     ? "text-lg text-yellow-600"
-                    : Math.abs(val) === 10
+                    : Math.abs(val) === MAX
                     ? "text-base text-red-500"
                     : Math.abs(val) % 5 === 0
                     ? "text-base text-gray-600"
@@ -142,9 +143,9 @@ export default function NumberLine({
 
       {/* Bottom labels */}
       <div className="flex justify-between mt-1 px-1">
-        <span className="text-sm font-bold text-red-500">← 왼쪽 끝 (-10)</span>
+        <span className="text-sm font-bold text-red-500">← 왼쪽 끝 ({MIN})</span>
         <span className="text-base font-black text-indigo-700">출발점: 0</span>
-        <span className="text-sm font-bold text-green-600">오른쪽 끝 (+10) →</span>
+        <span className="text-sm font-bold text-green-600">오른쪽 끝 ({MAX}) →</span>
       </div>
     </div>
   );

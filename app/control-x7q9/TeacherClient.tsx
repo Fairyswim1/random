@@ -26,6 +26,8 @@ import {
   MAX_NUM_FLIPS,
   FLIP_TOTAL_MS,
   FLIP_ANIMATION_STEPS,
+  POSITION_MIN,
+  POSITION_MAX,
 } from "@/lib/gameStore";
 import { useRouter } from "next/navigation";
 
@@ -109,7 +111,7 @@ export default function TeacherPage() {
     for (let i = 0; i < numFlips; i++) {
       const isHeads = Math.random() < 0.5;
       const result: CoinResult = isHeads ? "heads" : "tails";
-      pos = Math.max(-10, Math.min(10, pos + (isHeads ? 1 : -1)));
+      pos = Math.max(POSITION_MIN, Math.min(POSITION_MAX, pos + (isHeads ? 1 : -1)));
       results.push(result);
       positions.push(pos);
       cumulativeHeads.push(cumulativeHeads[i] + (isHeads ? 1 : 0));
@@ -215,7 +217,6 @@ export default function TeacherPage() {
   const quizSubmittedCount = currentQuizAnswers.filter((item) => item.answer?.answer).length;
   const quizRevealed = gameState.quizRevealed ?? false;
   const hasGradedAnswer = !!currentQuiz.answer;
-  const allQuizSubmitted = totalGroups > 0 && quizSubmittedCount >= totalGroups;
   const answersVisible = quizRevealed;
 
   return (
@@ -279,7 +280,7 @@ export default function TeacherPage() {
               <span className="rounded-full bg-purple-100 px-3 py-1 text-sm font-semibold text-purple-700">
                 {currentQuiz.type === "ox" ? "OX 퀴즈" : "주관식"}
               </span>
-              {hasGradedAnswer && currentQuiz.answer && (
+              {hasGradedAnswer && currentQuiz.answer && quizRevealed && (
                 <span className="rounded-full bg-green-100 px-3 py-1 text-sm font-semibold text-green-700">
                   정답: {currentQuiz.answer}
                 </span>
@@ -293,11 +294,10 @@ export default function TeacherPage() {
               {!quizRevealed && (
                 <button
                   onClick={handleRevealAnswers}
-                  disabled={!allQuizSubmitted}
-                  className="rounded-xl bg-green-600 px-4 py-2 text-sm font-semibold text-white shadow-md transition hover:bg-green-700 disabled:opacity-40"
+                  className="rounded-xl bg-green-600 px-4 py-2 text-sm font-semibold text-white shadow-md transition hover:bg-green-700"
                 >
                   {hasGradedAnswer ? "정답 공개" : "답안 공개"}
-                  {allQuizSubmitted ? "" : ` (${quizSubmittedCount}/${totalGroups})`}
+                  {totalGroups > 0 ? ` (${quizSubmittedCount}/${totalGroups})` : ""}
                 </button>
               )}
               <button onClick={handleNextQuiz} disabled={currentQuizIndex === quizQuestions.length - 1} className="rounded-xl bg-purple-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-40">다음 문제</button>

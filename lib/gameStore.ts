@@ -5,6 +5,8 @@ export type GameStatus = "idle" | "betting" | "flipping" | "results" | "quiz" | 
 export const PADLET_ACTIVITY_URL =
   "https://padlet.com/lhj3534/padlet-gzep97hk2pixyu1t";
 export const REQUIRED_BET_PER_ROUND = 10;
+export const POSITION_MIN = -30;
+export const POSITION_MAX = 30;
 export const MAX_NUM_FLIPS = 1000;
 export const FLIP_TOTAL_MS = 5000;
 export const FLIP_ANIMATION_STEPS = 50;
@@ -63,7 +65,7 @@ export const quizQuestions: QuizQuestion[] = [
     id: "ox-1",
     type: "ox",
     prompt:
-      "'평균 위치가 0이다'와 '실제로 원점 근처에 있을 가능성이 매우 크다'는 같은 의미이다.",
+      '"평균 위치가 0이다."라는 말과 "정확히 원점으로 도착할 가능성이 매우 크다"라는 말이 서로 같을까?',
     answer: "X",
   },
   {

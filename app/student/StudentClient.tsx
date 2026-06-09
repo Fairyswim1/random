@@ -18,10 +18,15 @@ import {
   quizQuestions,
   PADLET_ACTIVITY_URL,
   REQUIRED_BET_PER_ROUND,
+  POSITION_MIN,
+  POSITION_MAX,
 } from "@/lib/gameStore";
 import { useRouter } from "next/navigation";
 
-const POSITIONS = Array.from({ length: 21 }, (_, i) => i - 10);
+const POSITIONS = Array.from(
+  { length: POSITION_MAX - POSITION_MIN + 1 },
+  (_, i) => i + POSITION_MIN,
+);
 
 export default function StudentPage() {
   const router = useRouter();
@@ -395,7 +400,8 @@ export default function StudentPage() {
                 ⚠️ 기본 {REQUIRED_BET_PER_ROUND}코인을 배팅해야 제출할 수 있어요! (나머지는 남겨도 됩니다)
               </p>
 
-              <div className="grid grid-cols-7 gap-1.5 mb-5">
+              <div className="overflow-x-auto pb-2 mb-5">
+              <div className="grid min-w-[720px] grid-cols-11 gap-1">
                 {POSITIONS.map((pos) => {
                   const betAmt = bets[pos.toString()] ?? 0;
                   return (
@@ -428,6 +434,7 @@ export default function StudentPage() {
                     </div>
                   );
                 })}
+              </div>
               </div>
 
               {/* Summary */}
