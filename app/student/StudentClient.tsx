@@ -256,24 +256,25 @@ export default function StudentPage() {
         </div>
       </div>
 
-      <div className="max-w-2xl mx-auto px-4 py-6 space-y-4">
-        {/* Number Line (read-only) */}
-        {gameState.status !== "quiz" && gameState.status !== "padlet" && (
-        <div className="bg-white rounded-2xl shadow-md p-5">
-          <h2 className="font-bold text-gray-700 mb-3">📍 현재 수직선 상태</h2>
-          <NumberLine
-            position={gameState.currentPosition}
-            isAnimating={gameState.status === "flipping"}
-            lastMove={null}
-          />
-          <div className="mt-2 text-center text-sm text-gray-500">
-            {gameState.status === "flipping" && "🎲 동전이 던져지고 있어요!"}
-            {gameState.status === "betting" && gameState.bettingOpen && "💭 어느 위치를 예측하나요?"}
-            {gameState.status === "results" && `🎯 최종 위치: ${gameState.result}번`}
+      {gameState.status !== "quiz" && gameState.status !== "padlet" && (
+        <div className="w-full px-1 py-4 sm:px-2">
+          <div className="rounded-2xl bg-white px-0.5 py-4 shadow-md sm:px-1">
+            <h2 className="mb-3 px-2 font-bold text-gray-700 sm:px-3">📍 현재 수직선 상태</h2>
+            <NumberLine
+              position={gameState.currentPosition}
+              isAnimating={gameState.status === "flipping"}
+              lastMove={null}
+            />
+            <div className="mt-2 px-2 text-center text-sm text-gray-500 sm:px-3">
+              {gameState.status === "flipping" && "🎲 동전이 던져지고 있어요!"}
+              {gameState.status === "betting" && gameState.bettingOpen && "💭 어느 위치를 예측하나요?"}
+              {gameState.status === "results" && `🎯 최종 위치: ${gameState.result}번`}
+            </div>
           </div>
         </div>
-        )}
+      )}
 
+      <div className="mx-auto w-full max-w-4xl space-y-4 px-3 py-4 sm:px-4">
         {/* Status-based content */}
         <AnimatePresence mode="wait">
           {gameState.status === "padlet" && participatedInQuizRef.current && (

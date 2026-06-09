@@ -348,10 +348,10 @@ export default function TeacherPage() {
           </div>
         </div>
       ) : (
-      <div className="max-w-7xl mx-auto px-4 py-4 space-y-4">
+      <div className="mx-auto w-full max-w-[min(100%,96rem)] px-2 py-4 space-y-4 sm:px-4">
 
         {/* ① 수직선 - 풀 너비 */}
-        <div className="bg-white rounded-2xl shadow-md px-8 py-6">
+        <div className="bg-white rounded-2xl shadow-md px-3 py-5 sm:px-5">
           <div className="flex items-center justify-between mb-2">
             <h2 className="text-lg font-bold text-gray-700">📍 수직선</h2>
             <div className="flex items-center gap-3">
