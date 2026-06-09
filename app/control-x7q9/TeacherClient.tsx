@@ -30,6 +30,7 @@ import {
   POSITION_MAX,
 } from "@/lib/gameStore";
 import { useRouter } from "next/navigation";
+import { unlockGameAudio, playMoveSound, playResultSound } from "@/lib/gameSounds";
 
 type CoinResult = "heads" | "tails";
 
@@ -100,6 +101,7 @@ export default function TeacherPage() {
 
   const handleFlipAll = useCallback(async () => {
     if (flippingRef.current) return;
+    unlockGameAudio();
     flippingRef.current = true;
     setIsFlipping(true);
 
@@ -133,6 +135,7 @@ export default function TeacherPage() {
       setCoinResult(result);
       setLastMove(move);
       setFlipSummary({ heads, tails, progress: completed });
+      playMoveSound(move);
 
       updateGameState({
         currentPosition: positions[completed],
@@ -152,6 +155,7 @@ export default function TeacherPage() {
       currentPosition: finalPos,
       flipHistory: [],
     });
+    playResultSound();
 
     setIsFlipping(false);
     flippingRef.current = false;

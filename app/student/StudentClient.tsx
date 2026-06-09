@@ -22,6 +22,8 @@ import {
   POSITION_MAX,
 } from "@/lib/gameStore";
 import { useRouter } from "next/navigation";
+import { unlockGameAudio } from "@/lib/gameSounds";
+import { useGameSounds } from "@/hooks/useGameSounds";
 
 const POSITIONS = Array.from(
   { length: POSITION_MAX - POSITION_MIN + 1 },
@@ -49,6 +51,23 @@ export default function StudentPage() {
   const [quizError, setQuizError] = useState("");
   const [submittingQuiz, setSubmittingQuiz] = useState(false);
   const participatedInQuizRef = useRef(false);
+
+  useGameSounds(gameState, joined);
+
+  useEffect(() => {
+    if (!joined) return;
+    const unlock = () => {
+      unlockGameAudio();
+      document.removeEventListener("click", unlock);
+      document.removeEventListener("touchstart", unlock);
+    };
+    document.addEventListener("click", unlock);
+    document.addEventListener("touchstart", unlock);
+    return () => {
+      document.removeEventListener("click", unlock);
+      document.removeEventListener("touchstart", unlock);
+    };
+  }, [joined]);
 
   useEffect(() => {
     const unsub1 = subscribeGameState(setGameState);
@@ -113,6 +132,7 @@ export default function StudentPage() {
   };
 
   const handleJoin = async () => {
+    unlockGameAudio();
     const name = groupNameInput.trim();
     if (!name) {
       setBetError("조 이름을 입력하세요");
